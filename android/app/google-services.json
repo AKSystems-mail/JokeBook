@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "578920433940-ocv3fooqqiolkmhuprs3u9rl8vggnfh6.apps.googleusercontent.com",
+          "client_id": "578920433940-63j5b8fept2sklr1ov8vru36omtnhv6p.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.jokebook.app",
-            "certificate_hash": "d99f5b8774d004eeeb9b52624465e46eb43a3ff6"
+            "certificate_hash": "b5630988f7a232a00bd7e1ab97cfbef204d4b038"
           }
         },
         {
