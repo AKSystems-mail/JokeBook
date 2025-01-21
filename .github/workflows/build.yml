@@ -41,7 +41,7 @@ jobs:
           cd ..
 
       - name: Build APK (Flutter Command)
-        run: flutter build apk --release # Or flutter build apk --debug for debug builds
+        run: flutter build apk # Or flutter build apk --debug for debug builds
         working-directory: ./ # VERY IMPORTANT!
 
       - name: Upload APK
