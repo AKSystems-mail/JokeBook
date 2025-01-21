@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ak.jokebook"
+    namespace = "com.jokebook.app"
     compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ak.jokebook"
+        applicationId = "com.jokebook.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
