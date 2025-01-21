@@ -10,22 +10,42 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Set up JDK
+
+      - name: Set up Java JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-      - name: Build with Gradle
-        run: ./android/gradlew build assembleDebug
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          flutter-version: '3.x' # Or a specific version like '3.10.x', 'latest'
+          channel: 'stable'
+
+      - name: Flutter doctor -v
+        run: flutter doctor -v
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Enable AndroidX and Jetifier (Important for Flutter)
+        run: |
+          cd android
+          ./gradlew properties | grep android.useAndroidX=true || echo "android.useAndroidX=true" >> gradle.properties
+          ./gradlew properties | grep android.enableJetifier=true || echo "android.enableJetifier=true" >> gradle.properties
+          cd ..
+
+      - name: Build APK (Flutter Command)
+        run: flutter build apk --release # Or flutter build apk --debug for debug builds
+        working-directory: ./ # VERY IMPORTANT!
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4 # Use v4
+        with:
+          name: app-release.apk # Or app-debug.apk
+          path: build/app/outputs/flutter-apk/app-release.apk # Correct path for Flutter
