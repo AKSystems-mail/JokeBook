@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "578920433940",
+    "project_id": "joke-book-d1510",
+    "storage_bucket": "joke-book-d1510.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:578920433940:android:b362740710668f2b5c9a01",
+        "android_client_info": {
+          "package_name": "com.jokebook.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "578920433940-ocv3fooqqiolkmhuprs3u9rl8vggnfh6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jokebook.app",
+            "certificate_hash": "d99f5b8774d004eeeb9b52624465e46eb43a3ff6"
+          }
+        },
+        {
+          "client_id": "578920433940-a6anuf2i62hnje30d0qhrmpm5b6akvvl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmTCVsMbCf7sTNE2hu13u2A-83AExLIC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "578920433940-a6anuf2i62hnje30d0qhrmpm5b6akvvl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
