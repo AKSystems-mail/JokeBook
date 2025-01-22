@@ -22,7 +22,7 @@ android {
         applicationId "com.jokebook.app"
         minSdk 24
         targetSdk 34
-        versionCode flutterVersionCode.toInteger()
+        versionCode 1
         versionName flutterVersionName
     }
 
