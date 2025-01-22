@@ -22,13 +22,12 @@ android {
         applicationId "com.jokebook.app"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName flutterVersionName
+        versionCode 1  // You can set a version code here if needed
     }
 
     signingConfigs {
         release {
-            if (project.findProperty('KEY_STORE_PASSWORD') != null) { // The crucial change
+            if (project.findProperty('KEY_STORE_PASSWORD') != null) {
                 storeFile file("keystore.jks")
                 storePassword KEY_STORE_PASSWORD
                 keyAlias KEY_ALIAS
@@ -45,7 +44,7 @@ android {
 
     buildTypes {
         release {
-            if(project.findProperty('KEY_STORE_PASSWORD') != null){ // The crucial change
+            if(project.findProperty('KEY_STORE_PASSWORD') != null){
                 signingConfig signingConfigs.release
                 minifyEnabled true
                 shrinkResources true
