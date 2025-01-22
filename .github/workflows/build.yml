@@ -40,12 +40,19 @@ jobs:
           ./gradlew properties | grep android.enableJetifier=true || echo "android.enableJetifier=true" >> gradle.properties
           cd ..
 
-      - name: Build APK (Flutter Command)
-        run: flutter build apk # Or flutter build apk --debug for debug builds
-        working-directory: ./ # VERY IMPORTANT!
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+      - name: Build APK (Release)
+        run: flutter build apk --release
+        working-directory: ./
+        env:
+          KEY_STORE_PATH: android/app/keystore.jks
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4 # Use v4
+        uses: actions/upload-artifact@v4
         with:
-          name: app-release.apk # Or app-debug.apk
-          path: build/app/outputs/flutter-apk/app-release.apk # Correct path for Flutter
+          name: app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk

@@ -37,14 +37,14 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("new-upload-keystore.jks")
+            storeFile file("keystore.jks")
             storePassword "newpassword"
             keyAlias "upload"
             keyPassword "newpassword"
         }
 
         debug {
-            storeFile file("new-upload-keystore.jks")
+            storeFile file("keystore.jks")
             storePassword "newpassword"
         }
     }
