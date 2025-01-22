@@ -23,6 +23,7 @@ android {
         minSdk 24
         targetSdk 34
         versionCode 1  // You can set a version code here if needed
+        versionName "1.0.0"
     }
 
     signingConfigs {
