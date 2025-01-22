@@ -1,7 +1,6 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -20,32 +19,40 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.jokebook.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = flutter.versionName
-    }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
+        applicationId "com.jokebook.app"
+        minSdk 24
+        targetSdk 34
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
     }
 
     signingConfigs {
         release {
+            if (project.findProperty('KEY_STORE_PASSWORD') != null) { // The crucial change
+                storeFile file("keystore.jks")
+                storePassword KEY_STORE_PASSWORD
+                keyAlias KEY_ALIAS
+                keyPassword KEY_PASSWORD
+            }
+        }
+        debug {
             storeFile file("keystore.jks")
             storePassword "newpassword"
             keyAlias "upload"
             keyPassword "newpassword"
         }
+    }
 
-        debug {
-            storeFile file("keystore.jks")
-            storePassword "newpassword"
+    buildTypes {
+        release {
+            if(project.findProperty('KEY_STORE_PASSWORD') != null){ // The crucial change
+                signingConfig signingConfigs.release
+                minifyEnabled true
+                shrinkResources true
+            }
+        }
+        debug{
+            signingConfig signingConfigs.debug
         }
     }
 }
@@ -53,4 +60,3 @@ android {
 flutter {
     source = "../.."
 }
-
