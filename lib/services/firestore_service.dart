@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/models/bit.dart';
@@ -9,6 +11,31 @@ class FirestoreService {
   final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Authentication instance
   final FirebaseFirestore _db = FirebaseFirestore.instance; // Firestore instance
   static final Logger _log = Logger('FirestoreService'); // Logger for this service
+
+  // Create a new user with email and password
+  Future<void> createUserWithEmailAndPassword(String email, String password) async {
+    try {
+      _log.info('Creating user with email: $email');
+      // Create user in Firebase Authentication
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      // Get user ID
+      final userId = userCredential.user!.uid;
+      // Create a new document in the 'users' collection with the user's ID
+      await _db.collection('users').doc(userId).set({
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      _log.info('User created successfully with ID: $userId');
+    } on FirebaseAuthException catch (e) {
+      _log.severe('Failed to create user: $e');
+      rethrow; // Re-throw the error to be handled by the caller
+    } catch (e) {
+      _log.severe('An unexpected error occurred during user creation: $e');
+      rethrow; // Re-throw the error
+    }
+  }
 
   // Add a new Bit
   Future<void> addBit(Bit bit) {
@@ -176,7 +203,7 @@ class FirestoreService {
     final userId = _auth.currentUser!.uid;
     _log.info('Getting all recordings for user $userId');
     final snapshot = await _db.collection('users').doc(userId).collection('recordings').orderBy('createdAt', descending: true).get(); 
-
+    
     return snapshot.docs.map((doc) => Recording.fromFirestore(doc)).toList();
   }
 
