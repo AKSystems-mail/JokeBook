@@ -7,20 +7,12 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:578920433940:android:b362740710668f2b5c9a01",
+        "mobilesdk_app_id": "1:578920433940:android:89116dd8f73f73b75c9a01",
         "android_client_info": {
-          "package_name": "com.jokebook.app"
+          "package_name": "com.example.myapp"
         }
       },
       "oauth_client": [
-        {
-          "client_id": "578920433940-63j5b8fept2sklr1ov8vru36omtnhv6p.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.jokebook.app",
-            "certificate_hash": "b5630988f7a232a00bd7e1ab97cfbef204d4b038"
-          }
-        },
         {
           "client_id": "578920433940-a6anuf2i62hnje30d0qhrmpm5b6akvvl.apps.googleusercontent.com",
           "client_type": 3

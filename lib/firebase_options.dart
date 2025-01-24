@@ -37,13 +37,13 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB2rTq6v0i_4HwG0iT_4Hk5Y-G8mCdaZgc2Y',
-    appId: '1:578920433940:web:4470edc3d88f9c6e5c9a01',
+    apiKey: 'AIzaSyArE56yeA2Fqf1H7_r5Kx3QyymCdaZgc2Y',
+    appId: '1:578920433940:web:e5029eacae60cfd55c9a01',
     messagingSenderId: '578920433940',
     projectId: 'joke-book-d1510',
     authDomain: 'joke-book-d1510.firebaseapp.com',
     storageBucket: 'joke-book-d1510.firebasestorage.app',
-    measurementId: 'G-KGZ6NHSM73',
+    measurementId: 'G-MGY7S71NDD',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
