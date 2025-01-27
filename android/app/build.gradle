@@ -30,16 +30,16 @@ android {
         release {
             if (project.findProperty('KEY_STORE_PASSWORD') != null) {
                 storeFile file('android/app/keystore.jks')
-                storePassword 104tenfour
-                keyAlias upload
-                keyPassword 104tenfour
+                storePassword KEY_STORE_PASSWORD
+                keyAlias KEY_ALIAS
+                keyPassword KEY_PASSWORD
             }
         }
         debug {
-            storeFile file("keystore.jks")
-            storePassword "104tenfour"
+            storeFile file("android/app/keystore.jks")
+            storePassword "android"
             keyAlias "upload"
-            keyPassword "104tenfour"
+            keyPassword "android"
         }
     }
 
