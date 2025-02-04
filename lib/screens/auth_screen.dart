@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'home_screen.dart'; // Ensure you have this screen
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
-
+  const AuthScreen({Key? key}) : super(key: key);
+  
   @override
   AuthScreenState createState() => AuthScreenState();
 }
 
 class AuthScreenState extends State<AuthScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '578920433940-1k9o2343vfr01t22m1q9c05lq6a8q717.apps.googleusercontent.com'
-  );
+    final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+    bool _isLoading = false;
+    
+
   String _loginMessage = "";
 
   @override
@@ -25,60 +23,65 @@ class AuthScreenState extends State<AuthScreen> {
     _checkCurrentUser();
   }
 
+  
   Future<void> _checkCurrentUser() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      Future.delayed(Duration.zero, () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      });
+    setState(() {
+    });
+
+    try {
+      final user = _auth.currentUser; // Access _auth, not widget.auth
+      
+        if (user != null) {
+          // User is signed in. Navigate only if mounted.
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          // User is not signed in. Set state only if mounted.
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        }
+      } catch (e) {
+        // Handle any error here. Set state only if mounted.
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        print("Error checking user: $e");
     }
   }
 
   Future<void> _signInWithEmailPassword() async {
+    setState(() {
+        _isLoading = true;
+    });
     try {
       final email = _emailController.text;
       final password = _passwordController.text;
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       if (!mounted) return;
-      Future.delayed(Duration.zero, () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+      setState(() {
+          _isLoading = false;
       });
+      if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+      };
     } catch (e) {
-      setState(() {
-        _loginMessage = "Failed to login with email and password. Please try again.";
-      });
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        setState(() {
-          _loginMessage = "Error: Failed to sign in with Google. Please try again.";
+         setState(() {
+          _isLoading = false;
         });
-        return;
-      }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      await _auth.signInWithCredential(credential);
-      if (!mounted) return;
-      Future.delayed(Duration.zero, () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      });
-    } catch (error) {
-      setState(() {
-        _loginMessage = "Failed to login with Google. Please try again.";
-      });
+        if (mounted) { // Very important to check mounted here as well
+          
+          // Handle error (show snackbar, etc.)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error login in: $e')),
+          );
+        }
+      
     }
   }
 
@@ -90,31 +93,30 @@ class AuthScreenState extends State<AuthScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _signInWithEmailPassword,
-              child: const Text('Sign in with Email/Password'),
-            ),
-            const SizedBox(height: 18),
-            ElevatedButton(
-              onPressed: _signInWithGoogle,
-              child: const Text('Sign in with Google'),
-            ),
-            const SizedBox(height: 18),
-            Text(_loginMessage),
-          ],
+        child: _isLoading ? const Center(child: CircularProgressIndicator()) :  Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                  onPressed: _signInWithEmailPassword,
+                  child: const Text('Sign in with Email/Password'),
+              ),
+              const SizedBox(height: 18),
+              Text(_loginMessage),
+            ],
+          
+          
+          
+          
         ),
       ),
     );
@@ -124,6 +126,6 @@ class AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    super.dispose();
+    super.dispose(); 
   }
 }

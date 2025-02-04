@@ -34,7 +34,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
-        await Provider.of<BitProvider>(context, listen: false).addBit(newBit);
+         await Provider.of<BitProvider>(context, listen: false).addBit(newBit);
       }
     }
   }

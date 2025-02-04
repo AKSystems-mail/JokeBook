@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Set up Java JDK
         uses: actions/setup-java@v3
@@ -24,33 +23,33 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x' # Or a specific version like '3.10.x', 'latest'
+          flutter-version: '3.10.5' # Pin to a specific version
           channel: 'stable'
 
-      - name: Flutter doctor -v
-        run: flutter doctor -v
+      - run: flutter doctor -v
 
-      - name: Get dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Enable AndroidX and Jetifier (Important for Flutter)
+      - name: Enable AndroidX and Jetifier
         run: |
           cd android
-          ./gradlew properties | grep android.useAndroidX=true || echo "android.useAndroidX=true" >> gradle.properties
-          ./gradlew properties | grep android.enableJetifier=true || echo "android.enableJetifier=true" >> gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
           cd ..
 
       - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Create gradle.properties
+        run: |
+          echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > android/gradle.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+          echo "storeFile=release.keystore" >> android/gradle.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+        working-directory: ./android
 
       - name: Build APK (Release)
         run: flutter build apk --release
-        working-directory: ./
-        env:
-          KEY_STORE_PATH: android/app/keystore.jks
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
