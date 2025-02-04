@@ -37,7 +37,7 @@ jobs:
           echo "dart-sdk: '3.3.0'" >> pubspec.yaml
 
       - name: Upgrade Dependencies
-        run: flutter pub upgrade
+        run: flutter upgrade
 
       - name: Flutter Doctor
         run: flutter doctor -v
