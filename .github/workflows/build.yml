@@ -23,12 +23,24 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.5' # Pin to a specific version
+          flutter-version: '3.19.0' # Pin to a specific version
           channel: 'stable'
 
-      - run: flutter doctor -v
+      - name: Flutter version check
+        run: flutter --version
 
-      - run: flutter pub get
+      - name: Clear Flutter Cache
+        run: flutter clean
+
+      - name: Set up Dart version
+        run: |
+          echo "dart-sdk: '3.3.0'" >> pubspec.yaml
+
+      - name: Upgrade Dependencies
+        run: flutter pub upgrade
+
+      - name: Flutter Doctor
+        run: flutter doctor -v
 
       - name: Enable AndroidX and Jetifier
         run: |
