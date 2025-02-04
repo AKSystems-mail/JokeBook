@@ -1,5 +1,8 @@
 plugins {
     id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -37,9 +40,9 @@ android {
         }
         debug {
             storeFile file("android/app/keystore.jks")
-            storePassword "android"
+            storePassword "104tenfour"
             keyAlias "upload"
-            keyPassword "android"
+            keyPassword "104tenfour"
         }
     }
 

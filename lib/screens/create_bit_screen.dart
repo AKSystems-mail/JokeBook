@@ -24,7 +24,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
     super.dispose();
   }
 
-  Future<void> _handlePop(bool didPop) async { // Correct signature
+  Future<void> _handlePop(bool didPop) async {
     if (didPop) {
       if (_formKey.currentState!.validate()) {
         final newBit = Bit(
@@ -43,49 +43,47 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvoked: _handlePop, // Correct usage
-      child: Scaffold(
-        body: Consumer<SettingsProvider>(
-          builder: (context, settingsProvider, child) => Scaffold(
-            appBar: AppBar(
-              backgroundColor: settingsProvider.backgroundColor,
-              title: const Text('New Bit'),
-            ),
-            body: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _titleController,
+      onPopInvoked: _handlePop,
+      child: Consumer<SettingsProvider>(
+        builder: (context, settingsProvider, child) => Scaffold( // Only ONE Scaffold
+          appBar: AppBar(
+            backgroundColor: settingsProvider.backgroundColor,
+            title: const Text('New Bit'),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      hintText: 'Title',
+                      border: InputBorder.none,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16.0),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _bodyController,
+                      textAlignVertical: TextAlignVertical.top,
+                      maxLines: null,
+                      expands: true,
+                      keyboardType: TextInputType.multiline,
                       decoration: const InputDecoration(
-                        hintText: 'Title',
+                        hintText: 'premise setup punch...',
                         border: InputBorder.none,
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a title';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 16.0),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _bodyController,
-                        textAlignVertical: TextAlignVertical.top,
-                        maxLines: null,
-                        expands: true,
-                        keyboardType: TextInputType.multiline,
-                        decoration: const InputDecoration(
-                          hintText: 'premise setup punch...',
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

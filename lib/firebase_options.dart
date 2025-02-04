@@ -38,20 +38,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyArE56yeA2Fqf1H7_r5Kx3QyymCdaZgc2Y',
-    appId: '1:578920433940:web:e5029eacae60cfd55c9a01',
+    appId: '1:578920433940:web:bc5df72d0a3699925c9a01',
     messagingSenderId: '578920433940',
     projectId: 'joke-book-d1510',
     authDomain: 'joke-book-d1510.firebaseapp.com',
     storageBucket: 'joke-book-d1510.firebasestorage.app',
-    measurementId: 'G-MGY7S71NDD',
+    measurementId: 'G-L4CHTJ44TQ',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDmTCVsMbCf7sTNE2hu13u2A-83AExLIC8',
-    appId: '1:578920433940:android:b362740710668f2b5c9a01',
+    appId: '1:578920433940:android:29ef849e51996b9b5c9a01',
     messagingSenderId: '578920433940',
     projectId: 'joke-book-d1510',
     storageBucket: 'joke-book-d1510.firebasestorage.app',
-    
   );
+
 }

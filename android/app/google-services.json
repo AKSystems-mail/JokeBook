@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:578920433940:android:89116dd8f73f73b75c9a01",
+        "mobilesdk_app_id": "1:578920433940:android:29ef849e51996b9b5c9a01",
         "android_client_info": {
-          "package_name": "com.example.myapp"
+          "package_name": "com.jokebook.app"
         }
       },
       "oauth_client": [
