@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" >> android/gradle.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
-          echo "storeFile=release.keystore" >> android/gradle.properties
+          echo "storeFile=../keystore.jks" >> android/gradle.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
 
       - name: Add google-services.json
