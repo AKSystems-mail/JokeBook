@@ -32,14 +32,14 @@ android {
     signingConfigs {
         release {
             if (project.findProperty('KEY_STORE_PASSWORD') != null) {
-                storeFile file('android/app/keystore.jks')
+                storeFile file('keystore.jks')
                 storePassword 104tenfour
                 keyAlias upload
                 keyPassword 104tenfour
             }
         }
         debug {
-            storeFile file("android/app/keystore.jks")
+            storeFile file("keystore.jks")
             storePassword "104tenfour"
             keyAlias "upload"
             keyPassword "104tenfour"
