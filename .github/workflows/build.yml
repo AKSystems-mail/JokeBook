@@ -54,6 +54,7 @@ jobs:
 
       - name: Create gradle.properties
         run: |
+          mkdir -p android # Create the android directory if it doesn't exist
           cd android
           echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > android/gradle.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
