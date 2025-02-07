@@ -76,13 +76,22 @@ class MyApp extends StatelessWidget {
                 // ... Add other text styles with adjusted font sizes as needed
                 // e.g., titleLarge, titleMedium, titleSmall, etc.
               ),
-            ),
-            home: FutureBuilder<bool>(
+              ),
+            initialRoute: '/',
+            routes: {
+              '/': (context) => FutureBuilder<bool>(
               future: _checkAuthenticationStatus(),
               builder: (context, snapshot) {
-                return snapshot.data == true ? const HomeScreen() : const AuthScreen();
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // While waiting for the future to complete, you can display a loading indicator
+                  return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                } else {
+                  return snapshot.data == true ? const HomeScreen() : const AuthScreen();
+                }
               },
             ),
+             '/home': (context) => const HomeScreen(),
+            },
           );
         },
       ),
