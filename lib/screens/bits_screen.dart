@@ -19,9 +19,7 @@ class BitsScreen extends StatelessWidget {
             backgroundColor: settingsProvider.backgroundColor,
             title: const Text('Bits'),
             actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: ElevatedButton(
+              ElevatedButton(
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -29,17 +27,15 @@ class BitsScreen extends StatelessWidget {
                           builder: (context) => const CreateBitScreen()),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(10),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text('New Bit'),
                   ),
-                  child: const Icon(Icons.add),
-                ),
-              ),
-            ],
+                  ),
+                  ],
           ),
           body: bitProvider.bits.isEmpty
-              ? const Center(child: Text("No Bits Yet, Add one!"))
+              ? const Center(child: Text("No new bits yet, Get to writing!"))
               : ReorderableListView.builder(
                   padding: const EdgeInsets.all(8.0),
                   itemCount: bitProvider.bits.length,

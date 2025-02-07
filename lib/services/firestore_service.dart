@@ -46,7 +46,7 @@ class FirestoreService {
     }
     final userId = user.uid;
     _log.info('Adding bit with ID ${bit.id} for user $userId');
-    return _db.collection('users').doc(userId).collection('bits').doc(bit.id).set(bit.toMap())
+    return _db.collection('users').doc(userId).collection('bits').doc(bit.id).set({...bit.toMap(), 'userId': userId})
         .then((_) {
           _log.info('addBit function completed successfully');
         });

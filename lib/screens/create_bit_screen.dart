@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '/providers/settings_provider.dart';
-import '/models/bit.dart';
-import '/providers/bit_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/bit.dart';
+import '../providers/bit_provider.dart';
+import '../providers/settings_provider.dart';
 
 class CreateBitScreen extends StatefulWidget {
   const CreateBitScreen({super.key});
@@ -14,28 +14,51 @@ class CreateBitScreen extends StatefulWidget {
 
 class _CreateBitScreenState extends State<CreateBitScreen> {
   final _formKey = GlobalKey<FormState>();
+  String _title = '';
+  String _body = '';
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _bodyController.dispose();
-    super.dispose();
+  void _submit() {
+    final isValid = _formKey.currentState!.validate();
+    if (!isValid) {
+      return;
+    }
+    _formKey.currentState!.save();
+  }
+
+  Future<void> _saveBit() async {
+    if (_title.isEmpty && _body.isEmpty) {
+      return;
+    }
+    final bit = Bit(
+      id: DateTime.now().toString(),
+      title: _title,
+      body: _body,
+      userId: FirebaseAuth.instance.currentUser!.uid,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now()
+    );
+    try {
+      await Provider.of<BitProvider>(context, listen: false).addBit(bit, context);
+    } catch (e) {
+      // Handle error
+      print(e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create bit. Error: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _handlePop(bool didPop) async {
-    if (didPop) {
-      if (_formKey.currentState!.validate()) {
-        final newBit = Bit(
-          id: DateTime.now().toString(),
-          title: _titleController.text,
-          body: _bodyController.text,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-         await Provider.of<BitProvider>(context, listen: false).addBit(newBit);
-      }
+    if (!didPop) {
+      _submit();
+      await _saveBit();
+    }
+    if (context.mounted && didPop) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -45,7 +68,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
       canPop: true,
       onPopInvoked: _handlePop,
       child: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) => Scaffold( // Only ONE Scaffold
+        builder: (context, settingsProvider, child) => Scaffold(
           appBar: AppBar(
             backgroundColor: settingsProvider.backgroundColor,
             title: const Text('New Bit'),
@@ -68,19 +91,28 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
                       }
                       return null;
                     },
+                    onSaved: (value) {
+                      _title = value!;
+                    },
                   ),
-                  const SizedBox(height: 16.0),
                   Expanded(
                     child: TextFormField(
                       controller: _bodyController,
-                      textAlignVertical: TextAlignVertical.top,
                       maxLines: null,
                       expands: true,
-                      keyboardType: TextInputType.multiline,
                       decoration: const InputDecoration(
-                        hintText: 'premise setup punch...',
+                        hintText: 'Write your bit here...',
                         border: InputBorder.none,
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) {
+                        _body = value!;
+                      },
                     ),
                   ),
                 ],

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '/providers/bit_provider.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
   
   @override
   AuthScreenState createState() => AuthScreenState();
@@ -15,7 +17,7 @@ class AuthScreenState extends State<AuthScreen> {
     bool _isLoading = false;
     
 
-  String _loginMessage = "";
+  final String _loginMessage = "";
 
   @override
   void initState() {
@@ -63,13 +65,14 @@ class AuthScreenState extends State<AuthScreen> {
       final email = _emailController.text;
       final password = _passwordController.text;
       await _auth.signInWithEmailAndPassword(email: email, password: password);
+      await Provider.of<BitProvider>(context, listen: false).fetchBits();
       if (!mounted) return;
       setState(() {
           _isLoading = false;
       });
       if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
-      };
+      }
     } catch (e) {
          setState(() {
           _isLoading = false;

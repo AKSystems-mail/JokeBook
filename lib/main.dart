@@ -13,6 +13,7 @@ import 'providers/recordings_provider.dart'; // Import the RecordingsProvider
 import 'firebase_options.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/recordings_screen.dart'; // Import the RecordingsScreen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,21 +77,22 @@ class MyApp extends StatelessWidget {
                 // ... Add other text styles with adjusted font sizes as needed
                 // e.g., titleLarge, titleMedium, titleSmall, etc.
               ),
-              ),
+            ),
             initialRoute: '/',
             routes: {
               '/': (context) => FutureBuilder<bool>(
-              future: _checkAuthenticationStatus(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  // While waiting for the future to complete, you can display a loading indicator
-                  return const Scaffold(body: Center(child: CircularProgressIndicator()));
-                } else {
-                  return snapshot.data == true ? const HomeScreen() : const AuthScreen();
-                }
-              },
-            ),
-             '/home': (context) => const HomeScreen(),
+                future: _checkAuthenticationStatus(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // While waiting for the future to complete, you can display a loading indicator
+                    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                  } else {
+                    return snapshot.data == true ? const HomeScreen() : const AuthScreen();
+                  }
+                },
+              ),
+              '/home': (context) => const HomeScreen(),
+              '/recordings': (context) => const RecordingsScreen(), // Add the RecordingsScreen route
             },
           );
         },

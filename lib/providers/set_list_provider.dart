@@ -8,12 +8,8 @@ class SetListProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
 
   List<SetList> _setLists = []; // Initialize as an empty list
-  bool _isLoading = false;
+  bool isLoading = false;
   List<SetList> get setLists => _setLists;
-  bool get isLoading => _isLoading;
-  set isLoading(bool value) {
-    _isLoading = value;
-  }
 
   SetListProvider() {
     _listenToSetLists();

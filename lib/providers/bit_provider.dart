@@ -11,27 +11,37 @@ class BitProvider with ChangeNotifier {
   List<Bit> get bits => _bits;
 
   BitProvider() {
+    fetchBits();
+  }
+  Future<void> fetchBits() async {
     _firestoreService.getBits().listen((bits) {
       _bits = bits.reversed.toList(); // Reverse the list
       notifyListeners();
     });
   }
 
-  Future<void> addBit(Bit bit) async {
+  Future<void> addBit(Bit bit, BuildContext context) async {
     try {
       await _firestoreService.addBit(bit);
+      fetchBits();
     } catch (e) {
       // Handle error appropriately, e.g., show a snackbar or log
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add bit. Error: $e')),
+        );
+      }
       rethrow; // Re-throw to allow calling code to handle it
     }
   }
 
   Future<void> updateBit(Bit bit) async {
     try {
-      await _firestoreService.updateBit(bit); // Call Firestore service update method
+      await _firestoreService
+          .updateBit(bit); // Call Firestore service update method
     } catch (e) {
-      // Handle error appropriately
-      rethrow;
+      // Handle error appropriately, e.g., show a snackbar or log
+      rethrow; // Re-throw to allow calling code to handle it
     }
     // Optimistically update the UI to avoid waiting for Firestore response
     final index = _bits.indexWhere((b) => b.id == bit.id);
@@ -39,29 +49,46 @@ class BitProvider with ChangeNotifier {
       _bits[index] = bit;
       notifyListeners();
     }
-  }
 
-  void reorderBits(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-    final Bit item = _bits.removeAt(oldIndex);
-    _bits.insert(newIndex, item);
-    notifyListeners();
-  }
-
-  Future<void> deleteBit(String id, BuildContext context) async {
-    try {
-      final index = _bits.indexWhere((bit) => bit.id == id);
-      if (index != -1) {
-        _bits.removeWhere((bit) => bit.id == id);
-        await Provider.of<SetListProvider>(context, listen: false).removeBitFromSetLists(id);
+    Future<void> updateBit(Bit bit) async {
+      try {
+        await _firestoreService
+            .updateBit(bit); // Call Firestore service update method
+      } catch (e) {
+        // Handle error appropriately
+        rethrow;
       }
-      await _firestoreService.deleteBit(id);
+      // Optimistically update the UI to avoid waiting for Firestore response
+      final index = _bits.indexWhere((b) => b.id == bit.id);
+      if (index != -1) {
+        _bits[index] = bit;
+        notifyListeners();
+      }
+    }
+
+    void reorderBits(int oldIndex, int newIndex) {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final Bit item = _bits.removeAt(oldIndex);
+      _bits.insert(newIndex, item);
       notifyListeners();
-    } catch (e) {
-      // Handle error appropriately
-      rethrow;
+    }
+
+    Future<void> deleteBit(String id, BuildContext context) async {
+      try {
+        final index = _bits.indexWhere((bit) => bit.id == id);
+        if (index != -1) {
+          _bits.removeWhere((bit) => bit.id == id);
+          await Provider.of<SetListProvider>(context, listen: false)
+              .removeBitFromSetLists(id);
+        }
+        await _firestoreService.deleteBit(id);
+        notifyListeners();
+      } catch (e) {
+        // Handle error appropriately
+        rethrow;
+      }
     }
   }
 }
