@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
@@ -30,8 +31,10 @@ class RecordingsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   String get formattedRecordingDuration {
-    final minutes = _currentDuration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = _currentDuration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final minutes =
+        _currentDuration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds =
+        _currentDuration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
@@ -51,7 +54,7 @@ class RecordingsProvider with ChangeNotifier {
         filePath: filePath,
         setListId: setListId ?? '',
         audioUrl: '',
-        createdAt: DateTime.now(),
+        createdAt: Timestamp.fromDate(DateTime.now()),
       );
       startTime = DateTime.now();
       _startTimer();
@@ -125,14 +128,16 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-  Future<void> showRecordingConfirmationDialog(BuildContext context, String recordingTitle) async {
+  Future<void> showRecordingConfirmationDialog(
+      BuildContext context, String recordingTitle) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Save Recording?'),
-          content: Text('Would you like to save this recording as:\n"$recordingTitle"?'),
+          content: Text(
+              'Would you like to save this recording as:\n"$recordingTitle"?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

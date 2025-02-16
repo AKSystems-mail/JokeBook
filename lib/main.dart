@@ -17,20 +17,20 @@ import 'screens/recordings_screen.dart'; // Import the RecordingsScreen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp( // Initialize Firebase before Hive
-    options: DefaultFirebaseOptions.currentPlatform, 
-  ); 
+
+  await Firebase.initializeApp(
+    // Initialize Firebase before Hive
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await Hive.initFlutter(); // Initialize Hive after Firebase
-  Hive.registerAdapter(BitAdapter()); 
-  Hive.registerAdapter(SetListAdapter()); 
+  Hive.registerAdapter(BitAdapter()); // Register the BitAdapter
+  Hive.registerAdapter(SetListAdapter());
   runApp(const MyApp());
 
   // Listen for authentication state changes
   FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    if (user != null) {
-    }
-  }).onError((error, stackTrace) {
-  });
+    if (user != null) {}
+  }).onError((error, stackTrace) {});
 }
 
 class MyApp extends StatelessWidget {
@@ -50,17 +50,21 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => BitProvider()),
         ChangeNotifierProvider(create: (_) => SetListProvider()),
-        ChangeNotifierProvider(create: (_) => RecordingsProvider()), // Add the RecordingsProvider
-        ChangeNotifierProvider(create: (_) => SettingsProvider()), // Add the SettingsProvider
+        ChangeNotifierProvider(
+            create: (_) => RecordingsProvider()), // Add the RecordingsProvider
+        ChangeNotifierProvider(
+            create: (_) => SettingsProvider()), // Add the SettingsProvider
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settingsProvider, child) {
           return MaterialApp(
             title: 'Joke Book',
             theme: ThemeData(
-              colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue).copyWith(secondary: const Color(0xFFADD8E6)),
+              colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
+                  .copyWith(secondary: const Color(0xFFADD8E6)),
               primarySwatch: Colors.blue,
-              scaffoldBackgroundColor: settingsProvider.backgroundColor, // Tie scaffold background color to SettingsProvider
+              scaffoldBackgroundColor: settingsProvider
+                  .backgroundColor, // Tie scaffold background color to SettingsProvider
               appBarTheme: const AppBarTheme(
                 titleTextStyle: TextStyle(
                   fontFamily: 'PermanentMarker',
@@ -70,10 +74,10 @@ class MyApp extends StatelessWidget {
                 ),
               ),
               textTheme: const TextTheme(
-                bodyLarge: TextStyle(fontSize: 18), // Adjust as needed
-                bodyMedium: TextStyle(fontSize: 20),
-                bodySmall: TextStyle(fontSize: 18),
-                labelLarge: TextStyle(fontSize:24),
+                bodyLarge: TextStyle(fontSize: 16), // Adjust as needed
+                bodyMedium: TextStyle(fontSize: 14),
+                bodySmall: TextStyle(fontSize: 16),
+                labelLarge: TextStyle(fontSize: 18),
                 // ... Add other text styles with adjusted font sizes as needed
                 // e.g., titleLarge, titleMedium, titleSmall, etc.
               ),
@@ -81,18 +85,22 @@ class MyApp extends StatelessWidget {
             initialRoute: '/',
             routes: {
               '/': (context) => FutureBuilder<bool>(
-                future: _checkAuthenticationStatus(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // While waiting for the future to complete, you can display a loading indicator
-                    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-                  } else {
-                    return snapshot.data == true ? const HomeScreen() : const AuthScreen();
-                  }
-                },
-              ),
+                    future: _checkAuthenticationStatus(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        // While waiting for the future to complete, you can display a loading indicator
+                        return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()));
+                      } else {
+                        return snapshot.data == true
+                            ? const HomeScreen()
+                            : const AuthScreen();
+                      }
+                    },
+                  ),
               '/home': (context) => const HomeScreen(),
-              '/recordings': (context) => const RecordingsScreen(), // Add the RecordingsScreen route
+              '/recordings': (context) =>
+                  const RecordingsScreen(), // Add the RecordingsScreen route
             },
           );
         },

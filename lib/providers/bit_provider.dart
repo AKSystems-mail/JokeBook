@@ -1,94 +1,46 @@
 import 'package:flutter/material.dart';
 import '/models/bit.dart';
-import 'package:provider/provider.dart';
-import 'set_list_provider.dart';
 import '/services/firestore_service.dart';
 
 class BitProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
+  List<Bit> _bits = [];
 
-  List<Bit> _bits = []; // Initialize as an empty list of Bit
   List<Bit> get bits => _bits;
 
   BitProvider() {
-    fetchBits();
-  }
-  Future<void> fetchBits() async {
-    _firestoreService.getBits().listen((bits) {
-      _bits = bits.reversed.toList(); // Reverse the list
+    _firestoreService.getBitsStream().listen((bits) {
+      _bits = bits;
       notifyListeners();
     });
   }
 
-  Future<void> addBit(Bit bit, BuildContext context) async {
-    try {
-      await _firestoreService.addBit(bit);
-      fetchBits();
-    } catch (e) {
-      // Handle error appropriately, e.g., show a snackbar or log
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add bit. Error: $e')),
-        );
-      }
-      rethrow; // Re-throw to allow calling code to handle it
-    }
+  Future<void> addBit(Bit bit) async {
+    await _firestoreService.addBit(bit);
+    notifyListeners();
   }
 
   Future<void> updateBit(Bit bit) async {
-    try {
-      await _firestoreService
-          .updateBit(bit); // Call Firestore service update method
-    } catch (e) {
-      // Handle error appropriately, e.g., show a snackbar or log
-      rethrow; // Re-throw to allow calling code to handle it
-    }
-    // Optimistically update the UI to avoid waiting for Firestore response
+    await _firestoreService.updateBit(bit);
     final index = _bits.indexWhere((b) => b.id == bit.id);
     if (index != -1) {
       _bits[index] = bit;
       notifyListeners();
     }
+  }
 
-    Future<void> updateBit(Bit bit) async {
-      try {
-        await _firestoreService
-            .updateBit(bit); // Call Firestore service update method
-      } catch (e) {
-        // Handle error appropriately
-        rethrow;
-      }
-      // Optimistically update the UI to avoid waiting for Firestore response
-      final index = _bits.indexWhere((b) => b.id == bit.id);
-      if (index != -1) {
-        _bits[index] = bit;
-        notifyListeners();
-      }
-    }
+  Future<void> deleteBit(String bitId) async {
+    await _firestoreService.deleteBit(bitId);
+    _bits.removeWhere((bit) => bit.id == bitId);
+    notifyListeners();
+  }
 
-    void reorderBits(int oldIndex, int newIndex) {
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
-      final Bit item = _bits.removeAt(oldIndex);
-      _bits.insert(newIndex, item);
-      notifyListeners();
+  void reorderBits(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
     }
-
-    Future<void> deleteBit(String id, BuildContext context) async {
-      try {
-        final index = _bits.indexWhere((bit) => bit.id == id);
-        if (index != -1) {
-          _bits.removeWhere((bit) => bit.id == id);
-          await Provider.of<SetListProvider>(context, listen: false)
-              .removeBitFromSetLists(id);
-        }
-        await _firestoreService.deleteBit(id);
-        notifyListeners();
-      } catch (e) {
-        // Handle error appropriately
-        rethrow;
-      }
-    }
+    final Bit bit = _bits.removeAt(oldIndex);
+    _bits.insert(newIndex, bit);
+    notifyListeners();
   }
 }

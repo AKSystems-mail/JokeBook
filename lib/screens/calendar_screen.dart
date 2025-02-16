@@ -2,9 +2,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
-import '/providers/set_list_provider.dart';
-import 'package:jokebook/screens/set_list_detail_screen.dart';
-import 'package:jokebook/providers/settings_provider.dart';
+import '../providers/set_list_provider.dart';
+import '../screens/set_list_detail_screen.dart';
+import '../providers/settings_provider.dart';
 import 'package:logging/logging.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -28,7 +28,8 @@ class CalendarScreenState extends State<CalendarScreen> {
       builder: (context, settingsProvider, child) => Scaffold(
         appBar: AppBar(
           title: const Text('Calendar'),
-          backgroundColor: settingsProvider.backgroundColor, // Update AppBar background color
+          backgroundColor: settingsProvider
+              .backgroundColor, // Update AppBar background color
         ),
         body: Container(
           color: settingsProvider.backgroundColor, // Apply background color
@@ -49,13 +50,15 @@ class CalendarScreenState extends State<CalendarScreen> {
                   });
                   // Show Set Lists for the selected date
                   setState(() {
-                    _setListsForDate = setListProvider.setLists.where((setList) {
+                    _setListsForDate =
+                        setListProvider.setLists.where((setList) {
                       return isSameDay(setList.date, selectedDay);
                     }).toList();
                   });
                 },
                 calendarFormat: _calendarFormat, // Add this line
-                onFormatChanged: (format) { // Add this line
+                onFormatChanged: (format) {
+                  // Add this line
                   if (_calendarFormat != format) {
                     setState(() {
                       _calendarFormat = format;
@@ -64,7 +67,8 @@ class CalendarScreenState extends State<CalendarScreen> {
                 },
               ),
               const SizedBox(height: 8.0), // Add some spacing
-              Expanded( // Wrap the ListView.builder with Expanded
+              Expanded(
+                // Wrap the ListView.builder with Expanded
                 child: ListView.builder(
                   itemCount: _setListsForDate.length,
                   itemBuilder: (context, index) {
@@ -72,11 +76,13 @@ class CalendarScreenState extends State<CalendarScreen> {
                     final setList = _setListsForDate[index];
                     return ListTile(
                       title: Text(setList.title),
-                      subtitle: Text(DateFormat('MM/dd/yyyy').format(setList.date)),
+                      subtitle:
+                          Text(DateFormat('MM/dd/yyyy').format(setList.date)),
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => SetListDetailScreen(setList: setList),
+                            builder: (context) =>
+                                SetListDetailScreen(setList: setList),
                           ),
                         );
                       },
@@ -93,7 +99,9 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   List _getEventsForDay(DateTime day, SetListProvider setListProvider) {
     _logger.info('Checking events for day: $day');
-    final events = setListProvider.setLists.where((setList) => isSameDay(setList.date, day)).toList();
+    final events = setListProvider.setLists
+        .where((setList) => isSameDay(setList.date, day))
+        .toList();
     _logger.info('Events found: ${events.length}');
     return events.isNotEmpty ? ['Has Set List'] : [];
   }

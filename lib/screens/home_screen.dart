@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:jokebook/providers/settings_provider.dart';
+import '/providers/settings_provider.dart';
 
 import 'auth_screen.dart';
 import 'bits_screen.dart';
@@ -27,7 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _showSettingsPopup() {
-    Color tempColor = Provider.of<SettingsProvider>(context, listen: false).tempColor;
+    Color tempColor =
+        Provider.of<SettingsProvider>(context, listen: false).tempColor;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -46,7 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       setState(() {
                         tempColor = newColor;
                       });
-                      Provider.of<SettingsProvider>(context, listen: false).setTempColor(newColor);
+                      Provider.of<SettingsProvider>(context, listen: false)
+                          .setTempColor(newColor);
                     },
                   ),
                   const SizedBox(height: 20),
@@ -55,7 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       await FirebaseAuth.instance.signOut();
                       if (!mounted) return;
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const AuthScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const AuthScreen()),
                       );
                     },
                     child: const Text('Sign Out'),
@@ -66,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextButton(
                   child: const Text('Close'),
                   onPressed: () {
-                    Provider.of<SettingsProvider>(context, listen: false).updateBackgroundColor(tempColor);
+                    Provider.of<SettingsProvider>(context, listen: false)
+                        .updateBackgroundColor(tempColor);
                     Navigator.of(context).pop();
                   },
                 ),
@@ -133,7 +137,9 @@ class _HomeScreenState extends State<HomeScreen> {
               if (index == 4) {
                 _showSettingsPopup();
               } else {
-                setState(() { _selectedIndex = index; });
+                setState(() {
+                  _selectedIndex = index;
+                });
               }
             },
           ),
@@ -148,7 +154,8 @@ class ColorSlider extends StatefulWidget {
   final Color color;
   final ValueChanged<Color> onColorChanged;
 
-  const ColorSlider({super.key, required this.color, required this.onColorChanged});
+  const ColorSlider(
+      {super.key, required this.color, required this.onColorChanged});
 
   @override
   State<ColorSlider> createState() => _ColorSliderState();
@@ -165,7 +172,7 @@ class _ColorSliderState extends State<ColorSlider> {
 
   double _colorToSliderValue(Color color) {
     const Color startColor = Color(0xFFFFFFFF); // White
-    const Color endColor = Color(0xFFF4E204);   // Yellow
+    const Color endColor = Color(0xFFF4E204); // Yellow
 
     int startR = startColor.red;
     int startG = startColor.green;
@@ -188,7 +195,7 @@ class _ColorSliderState extends State<ColorSlider> {
 
   Color _sliderValueToColor(double value) {
     const Color startColor = Color(0xFFFFFFFF); // White
-    const Color endColor = Color(0xFFF4E204);   // Yellow
+    const Color endColor = Color(0xFFF4E204); // Yellow
 
     value = value.clamp(0.0, 1.0);
 

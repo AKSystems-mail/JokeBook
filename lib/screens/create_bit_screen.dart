@@ -1,12 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/bit.dart';
 import '../providers/bit_provider.dart';
 import '../providers/settings_provider.dart';
+import 'package:logging/logging.dart';
 
 class CreateBitScreen extends StatefulWidget {
-  const CreateBitScreen({super.key});
+  const CreateBitScreen({Key? key});
 
   @override
   State<CreateBitScreen> createState() => _CreateBitScreenState();
@@ -18,6 +20,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
   String _body = '';
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
+  final Logger _log = Logger('CreateBitScreen');
 
   void _submit() {
     final isValid = _formKey.currentState!.validate();
@@ -36,15 +39,18 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
       title: _title,
       body: _body,
       userId: FirebaseAuth.instance.currentUser!.uid,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now()
+      createdAt: Timestamp.fromDate(DateTime.now()),
+      updatedAt: Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
     );
     try {
-      await Provider.of<BitProvider>(context, listen: false).addBit(bit, context);
+      _log.info(
+          'Attempting to add bit: ${bit.toFirestore()}'); // Logging statement
+      await Provider.of<BitProvider>(context, listen: false).addBit(bit);
+      _log.info('Bit added successfully'); // Logging statement
     } catch (e) {
       // Handle error
-      print(e);
-      if (context.mounted) {
+      _log.severe('Error adding bit: $e'); // Logging statement
+      if (_title.isEmpty && _body.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to create bit. Error: $e')),
         );
@@ -57,16 +63,15 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
       _submit();
       await _saveBit();
     }
-    if (context.mounted && didPop) {
-      Navigator.of(context).pop();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: true,
-      onPopInvoked: _handlePop,
+    return WillPopScope(
+      onWillPop: () async {
+        _handlePop(false);
+        return true;
+      },
       child: Consumer<SettingsProvider>(
         builder: (context, settingsProvider, child) => Scaffold(
           appBar: AppBar(

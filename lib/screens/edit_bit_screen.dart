@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/models/bit.dart';
@@ -48,10 +49,13 @@ class _EditBitScreenState extends State<EditBitScreen> {
                   id: widget.bit.id,
                   title: _title,
                   body: _body,
+                  userId: widget.bit.userId, // Include userId
                   createdAt: widget.bit.createdAt,
-                  updatedAt: DateTime.now(),
+                  updatedAt:
+                      Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
                 );
-                Provider.of<BitProvider>(context, listen: false).updateBit(updatedBit);
+                Provider.of<BitProvider>(context, listen: false)
+                    .updateBit(updatedBit);
                 Navigator.pop(context);
               }
             },
@@ -72,7 +76,8 @@ class _EditBitScreenState extends State<EditBitScreen> {
                   hintStyle: const TextStyle(color: Colors.grey),
                   border: InputBorder.none,
                 ),
-                style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 18.0, fontWeight: FontWeight.bold),
                 onChanged: (value) => setState(() => _title = value),
                 validator: (value) {
                   if (value!.trim().isEmpty) {

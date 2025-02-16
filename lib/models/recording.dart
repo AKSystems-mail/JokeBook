@@ -6,7 +6,7 @@ class Recording {
   final String filePath;
   final String setListId;
   final String audioUrl;
-  final DateTime createdAt;
+  final Timestamp createdAt;
 
   Recording({
     required this.id,
@@ -18,18 +18,18 @@ class Recording {
   });
 
   factory Recording.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map;
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Recording(
       id: doc.id,
       title: data['title'] ?? '',
       filePath: data['filePath'] ?? '',
       setListId: data['setListId'] ?? '',
       audioUrl: data['audioUrl'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'title': title,
       'filePath': filePath,
@@ -37,23 +37,5 @@ class Recording {
       'audioUrl': audioUrl,
       'createdAt': createdAt,
     };
-  }
-
-  Recording copyWith({
-    String? id,
-    String? title,
-    String? filePath,
-    String? setListId,
-    String? audioUrl,
-    DateTime? createdAt,
-  }) {
-    return Recording(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      filePath: filePath ?? this.filePath,
-      setListId: setListId ?? this.setListId,
-      audioUrl: audioUrl ?? this.audioUrl,
-      createdAt: createdAt ?? this.createdAt,
-    );
   }
 }

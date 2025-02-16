@@ -5,8 +5,9 @@ import 'package:logging/logging.dart';
 part 'set_list.g.dart';
 
 final _logger = Logger('SetList');
+
 @HiveType(typeId: 1)
-class SetList {
+class SetList extends HiveObject {
   @HiveField(0)
   String id;
 
@@ -51,37 +52,23 @@ class SetList {
       _logger.info('Error: bits field contains non-string elements');
       throw ArgumentError('bits field must contain only strings');
     }
-    var createdAtTimestamp = data['createdAt'] as Timestamp?;
-    var updatedAtTimestamp = data['updatedAt'] as Timestamp?;
-    
     return SetList(
       id: doc.id,
       title: data['title'] ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      date: (data['date'] as Timestamp).toDate(),
       bits: List<String>.from(data['bits'] ?? []),
-      createdAt: createdAtTimestamp?.toDate() ?? DateTime.now(),
-      updatedAt: updatedAtTimestamp?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,
-      'date': date,
+      'date': Timestamp.fromDate(date),
       'bits': bits,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-    };
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'date': date,
-      'bits': bits,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 }

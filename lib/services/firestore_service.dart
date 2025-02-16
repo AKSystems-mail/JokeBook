@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/models/bit.dart';
@@ -8,37 +6,11 @@ import 'package:logging/logging.dart';
 import '/models/recording.dart';
 
 class FirestoreService {
-  final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Authentication instance
-  final FirebaseFirestore _db = FirebaseFirestore.instance; // Firestore instance
-  static final Logger _log = Logger('FirestoreService'); // Logger for this service
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final Logger _log = Logger('FirestoreService');
 
-  // Create a new user with email and password
-  Future<void> createUserWithEmailAndPassword(String email, String password) async {
-    try {
-      _log.info('Creating user with email: $email');
-      // Create user in Firebase Authentication
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      // Get user ID
-      final userId = userCredential.user!.uid;
-      // Create a new document in the 'users' collection with the user's ID
-      await _db.collection('users').doc(userId).set({
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      _log.info('User created successfully with ID: $userId');
-    } on FirebaseAuthException catch (e) {
-      _log.severe('Failed to create user: $e');
-      rethrow; // Re-throw the error to be handled by the caller
-    } catch (e) {
-      _log.severe('An unexpected error occurred during user creation: $e');
-      rethrow; // Re-throw the error
-    }
-  }
-
-  // Add a new Bit
-  Future<void> addBit(Bit bit) {
+  Future<void> addBit(Bit bit) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
@@ -46,13 +18,22 @@ class FirestoreService {
     }
     final userId = user.uid;
     _log.info('Adding bit with ID ${bit.id} for user $userId');
-    return _db.collection('users').doc(userId).collection('bits').doc(bit.id).set({...bit.toMap(), 'userId': userId})
+    _log.info('Bit data: ${bit.toFirestore()}'); // Log toFirestore()
+
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('bits')
+        .doc(bit.id)
+        .set(bit.toFirestore()) // Use toFirestore()
         .then((_) {
-          _log.info('addBit function completed successfully');
-        });
+      _log.info('addBit function completed successfully');
+    }).catchError((error) {
+      _log.severe('Error adding bit to Firestore:', error);
+      throw error;
+    });
   }
 
-  // Update a Bit
   Future<void> updateBit(Bit bit) async {
     try {
       final user = _auth.currentUser;
@@ -62,68 +43,59 @@ class FirestoreService {
       }
       final userId = user.uid;
       _log.info('Updating bit with ID ${bit.id} for user $userId');
-      await _db.collection('users').doc(userId).collection('bits').doc(bit.id)
-          .update(bit.toMap());
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('bits')
+          .doc(bit.id)
+          .update(bit.toFirestore()); // Use toFirestore()
     } catch (e) {
-      _log.severe('Error updating bit in Firestore:', e); // Log the error with level severe
-      rethrow; // Re-throw the error to be handled by the caller
+      _log.severe('Error updating bit in Firestore:', e);
+      rethrow;
     }
   }
 
-  // Delete a Bit
-  Future<void> deleteBit(String id) async {
+  Future<void> deleteBit(String bitId) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
       throw Exception('User not authenticated!');
     }
     final userId = user.uid;
-    _log.info('Deleting bit with ID $id for user $userId');
+    _log.info('Deleting bit with ID $bitId for user $userId');
     try {
-      await _db.collection('users').doc(userId).collection('bits').doc(id)
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('bits')
+          .doc(bitId)
           .delete();
     } catch (e) {
       _log.severe('Error deleting bit in Firestore:', e);
+      rethrow;
     }
   }
 
-  // Get a Bit by ID
-  Future<Bit> getBit(String id) async {
+  Stream<List<SetList>> getSetListsStream() {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
-      throw Exception('User not authenticated!');
+      return Stream.empty(); // Return empty stream
     }
     final userId = user.uid;
-    _log.info('Getting bit with ID $id for user $userId');
-    DocumentSnapshot doc = await _db
+    _log.info('Getting all set lists for user $userId');
+    return _db
         .collection('users')
         .doc(userId)
-        .collection('bits')
-        .doc(id)
-        .get();
-    return Bit.fromFirestore(doc);
+        .collection('setLists')
+        .snapshots()
+        .map((snapshot) {
+      _log.fine('Received ${snapshot.docs.length} set lists from Firestore');
+      return snapshot.docs.map((doc) => SetList.fromFirestore(doc)).toList();
+    });
   }
 
-  // Get all Bits for the current user
-  Stream<List<Bit>> getBits() {
-    final user = _auth.currentUser;
-    if (user == null) {
-      _log.severe('User not authenticated!');
-      throw Exception('User not authenticated!');
-    }
-    final userId = user.uid;
-    _log.info('Getting all bits for user $userId');
-    return _db.collection('users').doc(userId).collection('bits')
-        .snapshots().map((snapshot) {
-          _log.fine('Received ${snapshot.docs.length} bits from Firestore');
-          return snapshot.docs.map((doc) => Bit.fromFirestore(doc)).toList();
-        }
-    );
-  }
-
-  // Add a new SetList
-  Future<void> addSetList(SetList setList) {
+  Future<void> addSetList(SetList setList) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
@@ -131,26 +103,15 @@ class FirestoreService {
     }
     final userId = user.uid;
     _log.info('Adding set list with ID ${setList.id} for user $userId');
-    return _db.collection('users').doc(userId).collection('setLists')
-        .doc(setList.id).set(setList.toMap());
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('setLists')
+        .doc(setList.id)
+        .set(setList.toFirestore()); // Use toFirestore()
   }
 
-  // Get a SetList by ID
-  Future<SetList> getSetList(String id) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      _log.severe('User not authenticated!');
-      throw Exception('User not authenticated!');
-    }
-    final userId = user.uid;
-    _log.info('Getting set list with ID $id for user $userId');
-    DocumentSnapshot doc = await _db.collection('users').doc(userId)
-        .collection('setLists').doc(id).get();
-    return SetList.fromFirestore(doc);
-  }
-
-  // Update a SetList
-  Future<void> updateSetList(SetList setList) {
+  Future<void> updateSetList(SetList setList) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
@@ -158,56 +119,95 @@ class FirestoreService {
     }
     final userId = user.uid;
     _log.info('Updating set list with ID ${setList.id} for user $userId');
-    return _db.collection('users').doc(userId).collection('setLists')
-        .doc(setList.id).update(setList.toMap());
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('setLists')
+        .doc(setList.id)
+        .update(setList.toFirestore()); // Use toFirestore()
   }
 
-  // Delete a SetList
-  Future<void> deleteSetList(String id) async {
+  Future<void> deleteSetList(String setListId) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
       throw Exception('User not authenticated!');
     }
     final userId = user.uid;
-    _log.info('Deleting set list with ID $id for user $userId');
+    _log.info('Deleting set list with ID $setListId for user $userId');
     try {
-      await _db.collection('users').doc(userId).collection('setLists').doc(id)
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('setLists')
+          .doc(setListId)
           .delete();
     } catch (e) {
       _log.severe('Error deleting set list in Firestore:', e);
+      rethrow;
     }
   }
 
-  // Get all SetLists for the current user as a stream
-  Stream<List<SetList>> getSetListsStream() {
+  Future<SetList> getSetList(String setListId) async {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
       throw Exception('User not authenticated!');
     }
     final userId = user.uid;
-    _log.info('Getting all set lists stream for user $userId');
-    return _db.collection('users').doc(userId).collection('setLists').orderBy('createdAt', descending: true)
-        .snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => SetList.fromFirestore(doc)).toList();
+    _log.info('Getting set list with ID $setListId for user $userId');
+    final doc = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('setLists')
+        .doc(setListId)
+        .get();
+    if (!doc.exists) {
+      throw Exception('Set list not found');
+    }
+    return SetList.fromFirestore(doc);
+  }
+
+  Stream<List<Bit>> getBitsStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      _log.severe('User not authenticated!');
+      return Stream.empty();
+    }
+    final userId = user.uid;
+    _log.info('Getting all bits for user $userId');
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('bits')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      _log.fine('Received ${snapshot.docs.length} bits from Firestore');
+      return snapshot.docs.map((doc) => Bit.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      _log.severe('Error getting bits stream from Firestore:', error);
+      return Stream<List<Bit>>.empty();
     });
   }
 
-  // Get all Recordings for the current user
   Future<List<Recording>> getRecordings() async {
     if (_auth.currentUser == null) {
       _log.severe('User not authenticated!');
-      throw Exception('User not authenticated!');
+      return [];
     }
     final userId = _auth.currentUser!.uid;
     _log.info('Getting all recordings for user $userId');
-    final snapshot = await _db.collection('users').doc(userId).collection('recordings').orderBy('createdAt', descending: true).get(); 
-    
+    final snapshot = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('recordings')
+        .orderBy('createdAt', descending: true)
+        .get();
+
     return snapshot.docs.map((doc) => Recording.fromFirestore(doc)).toList();
   }
 
-  // Add a new Recording
   Future<void> addRecording(Recording recording) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -216,10 +216,14 @@ class FirestoreService {
     }
     final userId = user.uid;
     _log.info('Adding recording with ID ${recording.id} for user $userId');
-    await _db.collection('users').doc(userId).collection('recordings').doc(recording.id).set(recording.toMap());
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('recordings')
+        .doc(recording.id)
+        .set(recording.toFirestore()); // Use toFirestore()
   }
 
-  // Delete a Recording
   Future<void> deleteRecording(Recording recording) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -229,7 +233,12 @@ class FirestoreService {
     final userId = user.uid;
     _log.info('Deleting recording with ID ${recording.id} for user $userId');
     try {
-      await _db.collection('users').doc(userId).collection('recordings').doc(recording.id).delete();
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('recordings')
+          .doc(recording.id)
+          .delete();
     } catch (e) {
       _log.severe('Error deleting recording in Firestore:', e);
     }
