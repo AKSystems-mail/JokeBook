@@ -47,15 +47,11 @@ jobs:
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
 
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-
       - name: Create gradle.properties
         run: |
           echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" >> android/gradle.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
-          echo "storeFile=../release.keystore" >> android/gradle.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+          echo "storeFile=android/app/keystore.jks" >> android/gradle.properties          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
 
       - name: Add google-services.json
         run: cp google-services.json android/app/google-services.json

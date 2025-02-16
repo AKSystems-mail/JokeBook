@@ -29,22 +29,20 @@ android {
         versionName "1.0.0"
     }
 
-    signingConfigs {
-        release {
-            if (project.findProperty('KEY_STORE_PASSWORD') != null) {
-                storeFile file('keystore.jks')
-                storePassword 104tenfour
-                keyAlias upload
-                keyPassword 104tenfour
-            }
-        }
-        debug {
-            storeFile file("keystore.jks")
-            storePassword "104tenfour"
-            keyAlias "upload"
-            keyPassword "104tenfour"
-        }
+signingConfigs {
+    release {
+        storeFile file('android/app/keystore.jks')
+        storePassword project.findProperty('KEY_STORE_PASSWORD') ?: ""
+        keyAlias project.findProperty('KEY_ALIAS') ?: ""
+        keyPassword project.findProperty('KEY_PASSWORD') ?: ""
     }
+    debug {
+        storeFile file('android/app/keystore.jks')
+        storePassword project.findProperty('KEY_STORE_PASSWORD') ?: ""
+        keyAlias project.findProperty('KEY_ALIAS') ?: ""
+        keyPassword project.findProperty('KEY_PASSWORD') ?: ""
+    }
+}
 
     buildTypes {
         release {
