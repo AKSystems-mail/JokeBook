@@ -31,13 +31,13 @@ android {
 
 signingConfigs {
     release {
-        storeFile file('android/app/keystore.jks')
+        storeFile file('keystore.jks')
         storePassword project.findProperty('KEY_STORE_PASSWORD') ?: ""
         keyAlias project.findProperty('KEY_ALIAS') ?: ""
         keyPassword project.findProperty('KEY_PASSWORD') ?: ""
     }
     debug {
-        storeFile file('android/app/keystore.jks')
+        storeFile file('keystore.jks')
         storePassword project.findProperty('KEY_STORE_PASSWORD') ?: ""
         keyAlias project.findProperty('KEY_ALIAS') ?: ""
         keyPassword project.findProperty('KEY_PASSWORD') ?: ""
