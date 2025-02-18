@@ -221,7 +221,13 @@ class FirestoreService {
         .doc(userId)
         .collection('recordings')
         .doc(recording.id)
-        .set(recording.toFirestore()); // Use toFirestore()
+        .set(recording.toFirestore()) // Use toFirestore()
+        .then((_) {
+      _log.info('addRecording function completed successfully');
+    }).catchError((error) {
+      _log.severe('Error adding recording to Firestore:', error);
+      throw error;
+    });
   }
 
   Future<void> deleteRecording(Recording recording) async {

@@ -17,6 +17,24 @@ class Recording {
     required this.createdAt,
   });
 
+  Recording copyWith({
+    String? id,
+    String? title,
+    String? filePath,
+    String? setListId,
+    String? audioUrl,
+    Timestamp? createdAt,
+  }) {
+    return Recording(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      filePath: filePath ?? this.filePath,
+      setListId: setListId ?? this.setListId,
+      audioUrl: audioUrl ?? this.audioUrl,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory Recording.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Recording(

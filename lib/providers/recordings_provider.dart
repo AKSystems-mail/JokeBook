@@ -9,13 +9,16 @@ import '../models/recording.dart';
 import '../services/firestore_service.dart';
 import '../models/set_list.dart'; // Import SetList
 import 'package:logging/logging.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class RecordingsProvider with ChangeNotifier {
   final FlutterSoundRecorder _mRecorder = FlutterSoundRecorder();
   final _log = Logger('RecordingsProvider');
   final FlutterSoundPlayer _mPlayer = FlutterSoundPlayer();
   bool _isRecording = false;
-  final bool _isPlaying = false;
+  bool _isPlaying = false;
   String currentRecordingTitle = '';
   DateTime? startTime;
   String? currentSetListId;
@@ -24,7 +27,7 @@ class RecordingsProvider with ChangeNotifier {
   List<Recording> recordings = [];
   Recording? activeRecording;
   bool isDisposed = false;
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   Duration get currentDuration => _currentDuration;
   FlutterSoundPlayer get player => _mPlayer;
@@ -62,21 +65,51 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-  Future<void> stopRecording(BuildContext context) async {
-    if (_isRecording) {
-      try {
-        await _mRecorder.stopRecorder();
-      } finally {
-        _isRecording = false;
-        _stopTimer();
-        _handleRecordingStopped(context);
+Future<void> stopRecording(BuildContext context) async {
+  if (_isRecording) {
+    try {
+      await _mRecorder.stopRecorder();
+      _isRecording = false;
+      _stopTimer();
+
+      if (activeRecording != null) {
+        // Upload the recording to Firebase Storage
+        File recordingFile = File(activeRecording!.filePath);
+        String userId = FirebaseAuth.instance.currentUser!.uid; // Correct way to get UID
+        String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
+        UploadTask uploadTask = FirebaseStorage.instance
+            .ref()
+            .child(storagePath)
+            .putFile(recordingFile);
+
+        // Listen for state changes, errors, and completion of the upload.
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          _log.info('Task state: ${snapshot.state}');
+          _log.info('Progress: ${(snapshot.bytesTransferred / snapshot.totalBytes) * 100} %');
+        }, onError: (e) {
+          _log.severe('Error during upload: $e');
+        });
+
+        TaskSnapshot taskSnapshot = await uploadTask;
+        String downloadUrl = await taskSnapshot.ref.getDownloadURL();
+
+        // Update the recording with the download URL
+        activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
+
+        // Save the recording details to Firestore
+        await FirestoreService().addRecording(activeRecording!);
+
+        // Add the recording to the local list
+        recordings.add(activeRecording!);
+        notifyListeners();
       }
-      notifyListeners();
+    } catch (e) {
+      _log.warning("Error stopping and saving recording: $e");
     }
   }
+}
 
   bool isRecording() => _isRecording;
-  bool isPlaying() => _isPlaying;
 
   Future<String> getAudioFile(String? setListId) async {
     String newRecordingTitle;
@@ -122,12 +155,6 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-  void _handleRecordingStopped(BuildContext context) {
-    if (activeRecording != null) {
-      showRecordingConfirmationDialog(context, activeRecording!.title);
-    }
-  }
-
   Future<void> showRecordingConfirmationDialog(
       BuildContext context, String recordingTitle) async {
     return showDialog<void>(
@@ -157,8 +184,33 @@ class RecordingsProvider with ChangeNotifier {
     );
   }
 
-  void addRecording(String recordingTitle) {
-    // Add logic to save the recording
+  Future<void> addRecording(String recordingTitle) async {
+    if (activeRecording != null) {
+      try {
+        // Upload the recording to Firebase Storage
+        File recordingFile = File(activeRecording!.filePath);
+        String storagePath = 'recordings/${activeRecording!.id}.aac';
+        UploadTask uploadTask = FirebaseStorage.instance
+            .ref()
+            .child(storagePath)
+            .putFile(recordingFile);
+
+        TaskSnapshot taskSnapshot = await uploadTask;
+        String downloadUrl = await taskSnapshot.ref.getDownloadURL();
+
+        // Update the recording with the download URL
+        activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
+
+        // Save the recording details to Firestore
+        await FirestoreService().addRecording(activeRecording!);
+
+        // Add the recording to the local list
+        recordings.add(activeRecording!);
+        notifyListeners();
+      } catch (e) {
+        _log.warning("Error uploading recording: $e");
+      }
+    }
   }
 
   void _startTimer() {
@@ -172,12 +224,26 @@ class RecordingsProvider with ChangeNotifier {
     _timer?.cancel();
   }
 
-  void _startSubscription() {
-    // Add logic to start subscription
+  void _startSubscription() async {
+    if (activeRecording != null && activeRecording!.audioUrl.isNotEmpty) {
+      await _mPlayer.startPlayer(
+        fromURI: activeRecording!.audioUrl,
+        whenFinished: () {
+          _isPlaying = false;
+          notifyListeners();
+        },
+      );
+      _isPlaying = true;
+      notifyListeners();
+    }
   }
 
-  void _stopSubscription() {
-    // Add logic to stop subscription
+  void _stopSubscription() async {
+    if (_mPlayer.isPlaying) {
+      await _mPlayer.stopPlayer();
+      _isPlaying = false;
+      notifyListeners();
+    }
   }
 
   Future<void> initRecorder() async {
@@ -185,7 +251,13 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   Future<void> fetchRecordings() async {
-    // Add logic to fetch recordings
+    try {
+      List<Recording> recordingsList = await FirestoreService().getRecordings();
+      recordings = recordingsList;
+      notifyListeners();
+    } catch (e) {
+      _log.warning("Error fetching recordings: $e");
+    }
   }
 
   void setActiveRecording(Recording recording) {
@@ -194,6 +266,18 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   Future<void> deleteRecording(Recording recording) async {
-    // Add logic to delete recording
+    try {
+      // Delete the recording from Firebase Storage
+      await FirebaseStorage.instance.refFromURL(recording.audioUrl).delete();
+
+      // Delete the recording details from Firestore
+      await FirestoreService().deleteRecording(recording);
+
+      // Remove the recording from the local list
+      recordings.removeWhere((r) => r.id == recording.id);
+      notifyListeners();
+    } catch (e) {
+      _log.warning("Error deleting recording: $e");
+    }
   }
 }

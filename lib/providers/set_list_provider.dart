@@ -17,7 +17,6 @@ class SetListProvider with ChangeNotifier {
 
   Future<void> addSetList(SetList setList) async {
     await _firestoreService.addSetList(setList);
-    _setLists.add(setList);
     notifyListeners();
   }
 
@@ -43,5 +42,23 @@ class SetListProvider with ChangeNotifier {
     final SetList setList = _setLists.removeAt(oldIndex);
     _setLists.insert(newIndex, setList);
     notifyListeners();
+  }
+
+  void duplicateSetList(SetList setList, String newName, DateTime newDate) {
+    final newSetList = SetList(
+      id: DateTime.now().toString(),
+      title: newName,
+      date: newDate,
+      bits: List<String>.from(setList.bits),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    addSetList(newSetList);
+  }
+
+  void renameSetList(String id, String newName) {
+    final setList = _setLists.firstWhere((setList) => setList.id == id);
+    setList.title = newName;
+    updateSetList(setList);
   }
 }

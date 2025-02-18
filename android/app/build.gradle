@@ -1,11 +1,10 @@
 plugins {
     id "com.android.application"
-    // START: FlutterFire Configuration
-    id 'com.google.gms.google-services'
-    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
+apply plugin: 'com.google.gms.google-services'
+
 
 android {
     namespace = "com.jokebook.app"
@@ -57,6 +56,15 @@ signingConfigs {
         }
     }
 }
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:32.2.0')
+    // Add the Firebase Authentication dependency
+    implementation 'com.google.firebase:firebase-auth'
+    // Optional: Add the Google Play Services Auth dependency for Google Sign-In
+    implementation 'com.google.android.gms:play-services-auth:20.6.0'
+}
+
+
 
 flutter {
     source = "../.."

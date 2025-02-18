@@ -26,18 +26,22 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.setList.title);
+    _selectedDate = widget.setList.date;
   }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: widget.setList.date,
+      initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
+        _selectedDate = picked;
         widget.setList.date = picked;
+        widget.setList.updatedAt = DateTime.now();
+        Provider.of<SetListProvider>(context, listen: false).updateSetList(widget.setList);
       });
     }
   }
@@ -60,10 +64,13 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
           controller: _titleController,
           decoration: const InputDecoration(labelText: 'Title'),
           onFieldSubmitted: (value) {
-            widget.setList.title = value;
+            setState(() {
+              widget.setList.title = value;
+              widget.setList.updatedAt = DateTime.now();
+              setListProvider.updateSetList(widget.setList);
+            });
           },
-          style:
-              const TextStyle(color: Colors.black), // Set text color to white
+          style: const TextStyle(color: Colors.black),
         ),
         actions: <Widget>[
           Padding(
@@ -103,14 +110,6 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () {
-              widget.setList.updatedAt = DateTime.now();
-              setListProvider.updateSetList(widget.setList);
-              Navigator.pop(context);
-            },
-          ),
         ],
       ),
       body: Padding(
@@ -120,11 +119,10 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
           children: [
             Row(
               children: [
-                Text(
-                    "Date: ${DateFormat('MM/dd/yy').format(widget.setList.date)}"),
+                Text("Date: ${DateFormat('MM/dd/yy').format(_selectedDate)}"),
                 TextButton(
                   onPressed: () => _selectDate(context),
-                  child: const Text('Select Date'),
+                  child: const Text('Change Date'),
                 ),
               ],
             ),
@@ -144,17 +142,21 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                         id: 'not-found',
                         title: 'Bit Not Found',
                         body: 'This bit has been deleted.',
-                        userId: 'unknown', // Include userId
+                        userId: 'unknown',
                         createdAt: Timestamp.fromDate(DateTime.now()),
                         updatedAt: Timestamp.fromDate(DateTime.now()),
                       ),
                     );
 
                     return ListTile(
-                      title: Text(bit.title),
+                      title: Text(
+                        bit.title,
+                        style: const TextStyle(fontSize: 24.0), // Change text size here
+                      ),
                       subtitle: Text(
                         bit.body.split('\n').take(2).join('\n') +
                             (bit.body.split('\n').length > 2 ? '...' : ''),
+                        style: const TextStyle(fontSize: 20.0), // Change text size here
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         vertical: 4,
