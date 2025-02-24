@@ -90,6 +90,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
                       hintText: 'Title',
                       border: InputBorder.none,
                     ),
+                    textCapitalization: TextCapitalization.sentences,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a title';
@@ -109,6 +110,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
                         hintText: 'Write your bit here...',
                         border: InputBorder.none,
                       ),
+                      textCapitalization: TextCapitalization.sentences,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter some text';

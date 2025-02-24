@@ -12,7 +12,6 @@ import 'package:logging/logging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class RecordingsProvider with ChangeNotifier {
   final FlutterSoundRecorder _mRecorder = FlutterSoundRecorder();
   final _log = Logger('RecordingsProvider');
@@ -65,49 +64,49 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-Future<void> stopRecording(BuildContext context) async {
-  if (_isRecording) {
-    try {
-      await _mRecorder.stopRecorder();
-      _isRecording = false;
-      _stopTimer();
+  Future<void> stopRecording(BuildContext context) async {
+    if (_isRecording) {
+      try {
+        await _mRecorder.stopRecorder();
+        _isRecording = false;
+        _stopTimer();
 
-      if (activeRecording != null) {
-        // Upload the recording to Firebase Storage
-        File recordingFile = File(activeRecording!.filePath);
-        String userId = FirebaseAuth.instance.currentUser!.uid; // Correct way to get UID
-        String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
-        UploadTask uploadTask = FirebaseStorage.instance
-            .ref()
-            .child(storagePath)
-            .putFile(recordingFile);
+        if (activeRecording != null) {
+          // Upload the recording to Firebase Storage
+          File recordingFile = File(activeRecording!.filePath);
+          String userId = FirebaseAuth.instance.currentUser!.uid; // Correct way to get UID
+          String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
+          UploadTask uploadTask = FirebaseStorage.instance
+              .ref()
+              .child(storagePath)
+              .putFile(recordingFile);
 
-        // Listen for state changes, errors, and completion of the upload.
-        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-          _log.info('Task state: ${snapshot.state}');
-          _log.info('Progress: ${(snapshot.bytesTransferred / snapshot.totalBytes) * 100} %');
-        }, onError: (e) {
-          _log.severe('Error during upload: $e');
-        });
+          // Listen for state changes, errors, and completion of the upload.
+          uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+            _log.info('Task state: ${snapshot.state}');
+            _log.info('Progress: ${(snapshot.bytesTransferred / snapshot.totalBytes) * 100} %');
+          }, onError: (e) {
+            _log.severe('Error during upload: $e');
+          });
 
-        TaskSnapshot taskSnapshot = await uploadTask;
-        String downloadUrl = await taskSnapshot.ref.getDownloadURL();
+          TaskSnapshot taskSnapshot = await uploadTask;
+          String downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
-        // Update the recording with the download URL
-        activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
+          // Update the recording with the download URL
+          activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
 
-        // Save the recording details to Firestore
-        await FirestoreService().addRecording(activeRecording!);
+          // Save the recording details to Firestore
+          await FirestoreService().addRecording(activeRecording!);
 
-        // Add the recording to the local list
-        recordings.add(activeRecording!);
-        notifyListeners();
+          // Add the recording to the local list
+          recordings.add(activeRecording!);
+          notifyListeners();
+        }
+        } catch (e) {
+        _log.warning("Error stopping and saving recording: $e");
       }
-    } catch (e) {
-      _log.warning("Error stopping and saving recording: $e");
     }
   }
-}
 
   bool isRecording() => _isRecording;
 

@@ -13,14 +13,26 @@ class RecordingsScreen extends StatefulWidget {
   _RecordingsScreenState createState() => _RecordingsScreenState();
 }
 
-class _RecordingsScreenState extends State<RecordingsScreen> {
+class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
   Recording? _selectedRecording;
+  late AnimationController _animationController;
+  Duration _elapsedTime = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     Provider.of<RecordingsProvider>(context, listen: false).fetchRecordings();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _audioPlayer.onPositionChanged.listen((Duration position) {
+      setState(() {
+        _elapsedTime = position;
+      });
+    });
   }
 
   String _formatDuration(Duration duration) {
@@ -48,18 +60,19 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             title: const Text('Recordings'),
             actions: [
               IconButton(
-                icon: const Icon(Icons.play_arrow),
+                icon: AnimatedIcon(
+                  icon: AnimatedIcons.play_pause,
+                  progress: _animationController,
+                ),
                 onPressed: _selectedRecording != null
                     ? () async {
-                        await _audioPlayer.play(UrlSource(_selectedRecording!.audioUrl));
-                      }
-                    : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.pause),
-                onPressed: _selectedRecording != null
-                    ? () async {
-                        await _audioPlayer.pause();
+                        if (_audioPlayer.state == PlayerState.playing) {
+                          await _audioPlayer.pause();
+                          _animationController.reverse();
+                        } else {
+                          await _audioPlayer.play(UrlSource(_selectedRecording!.audioUrl));
+                          _animationController.forward();
+                        }
                       }
                     : null,
               ),
@@ -68,8 +81,24 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                 onPressed: _selectedRecording != null
                     ? () async {
                         await _audioPlayer.stop();
+                        _animationController.reverse();
+                        setState(() {
+                          _elapsedTime = Duration.zero;
+                        });
                       }
                     : null,
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    _formatDuration(_elapsedTime),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -79,7 +108,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                   itemCount: recordingsProvider.recordings.length,
                   itemBuilder: (context, index) {
                     final recording = recordingsProvider.recordings[index];
-                    final formattedDate = DateFormat('MM/dd/yyyy hh:mm').format(recording.createdAt.toDate());
+                    final formattedDate = DateFormat('MM/dd/yyyy hh:mm a').format(recording.createdAt.toDate());
                     return FutureBuilder<Duration>(
                       future: _getRecordingDuration(recording.audioUrl),
                       builder: (context, snapshot) {
@@ -128,6 +157,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 }

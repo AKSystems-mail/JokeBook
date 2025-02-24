@@ -51,6 +51,31 @@ class SetListsScreen extends StatelessWidget {
                     return Dismissible(
                       key: ValueKey(setList.id),
                       direction: DismissDirection.horizontal,
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text('Confirm Delete'),
+                              content: Text('Are you sure you want to delete "${setList.title}"?'),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(false);
+                                  },
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(true);
+                                  },
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
                       onDismissed: (direction) {
                         setListProvider.deleteSetList(setList.id);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,53 +182,59 @@ class SetListsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Duplicate Set List'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextField(
-                controller: _controller,
-                decoration: const InputDecoration(hintText: 'Enter new name'),
-              ),
-              const SizedBox(height: 20),
-              Row(
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Duplicate Set List'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Text('Date: '),
-                  Text(DateFormat('MM/dd/yyyy').format(selectedDate)),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: () async {
-                      final DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2101),
-                      );
-                      if (picked != null && picked != selectedDate) {
-                        selectedDate = picked;
-                      }
-                    },
+                  TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(hintText: 'Enter new name'),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: <Widget>[
+                      const Text('Date: '),
+                      Text(DateFormat('MM/dd/yyyy').format(selectedDate)),
+                      IconButton(
+                        icon: const Icon(Icons.calendar_today),
+                        onPressed: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null && picked != selectedDate) {
+                            setState(() {
+                              selectedDate = picked;
+                            });
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                setListProvider.duplicateSetList(setList, _controller.text, selectedDate);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setListProvider.duplicateSetList(setList, _controller.text, selectedDate);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

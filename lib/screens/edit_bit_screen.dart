@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/models/bit.dart';
 import '/providers/bit_provider.dart';
+import '/providers/settings_provider.dart';
 
 class EditBitScreen extends StatefulWidget {
   final Bit bit;
@@ -35,81 +36,103 @@ class _EditBitScreenState extends State<EditBitScreen> {
     super.dispose();
   }
 
+  void _submit() {
+    final isValid = _formKey.currentState!.validate();
+    if (!isValid) {
+      return;
+    }
+    _formKey.currentState!.save();
+  }
+
+  Future<void> _saveBit() async {
+    if (_title.isEmpty && _body.isEmpty) {
+      return;
+    }
+    final updatedBit = Bit(
+      id: widget.bit.id,
+      title: _title,
+      body: _body,
+      userId: widget.bit.userId, // Include userId
+      createdAt: widget.bit.createdAt,
+      updatedAt: Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
+    );
+    try {
+      await Provider.of<BitProvider>(context, listen: false).updateBit(updatedBit);
+    } catch (e) {
+      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update bit. Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _handlePop(bool didPop) async {
+    if (!didPop) {
+      _submit();
+      await _saveBit();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Bit'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final updatedBit = Bit(
-                  id: widget.bit.id,
-                  title: _title,
-                  body: _body,
-                  userId: widget.bit.userId, // Include userId
-                  createdAt: widget.bit.createdAt,
-                  updatedAt:
-                      Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
-                );
-                Provider.of<BitProvider>(context, listen: false)
-                    .updateBit(updatedBit);
-                Navigator.pop(context);
-              }
-            },
+    return WillPopScope(
+      onWillPop: () async {
+        _handlePop(false);
+        return true;
+      },
+      child: Consumer<SettingsProvider>(
+        builder: (context, settingsProvider, child) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: settingsProvider.backgroundColor,
+            title: const Text('Edit Bit'),
           ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  hintText: 'Title',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(
-                    fontSize: 18.0, fontWeight: FontWeight.bold),
-                onChanged: (value) => setState(() => _title = value),
-                validator: (value) {
-                  if (value!.trim().isEmpty) {
-                    return 'Please enter a title';
-                  }
-                  return null;
-                },
-              ),
-              const Divider(),
-              Expanded(
-                child: TextFormField(
-                  controller: _bodyController,
-                  maxLines: null,
-                  expands: true,
-                  keyboardType: TextInputType.multiline,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: InputDecoration(
-                    hintText: 'Start typing your bit here...',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      hintText: 'Title',
+                      border: InputBorder.none,
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _title = value!;
+                    },
                   ),
-                  style: const TextStyle(height: 1.5),
-                  onChanged: (value) => setState(() => _body = value),
-                  validator: (value) {
-                    if (value!.trim().isEmpty) {
-                      return 'Please enter content';
-                    }
-                    return null;
-                  },
-                ),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _bodyController,
+                      maxLines: null,
+                      expands: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Write your bit here...',
+                        border: InputBorder.none,
+                      ),
+                      textCapitalization: TextCapitalization.sentences,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) {
+                        _body = value!;
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -94,7 +94,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
                 color: Colors.red,
-                size: 34.0,
+                size: 40.0,
               ),
             ),
           ),
@@ -131,58 +131,72 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold)),
             Expanded(
               child: Scrollbar(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widget.setList.bits.length,
-                  itemBuilder: (context, index) {
-                    final bitId = widget.setList.bits[index];
-                    final bit = bitProvider.bits.firstWhere(
-                      (b) => b.id == bitId,
-                      orElse: () => Bit(
-                        id: 'not-found',
-                        title: 'Bit Not Found',
-                        body: 'This bit has been deleted.',
-                        userId: 'unknown',
-                        createdAt: Timestamp.fromDate(DateTime.now()),
-                        updatedAt: Timestamp.fromDate(DateTime.now()),
-                      ),
-                    );
-
-                    return ListTile(
-                      title: Text(
-                        bit.title,
-                        style: const TextStyle(fontSize: 24.0), // Change text size here
-                      ),
-                      subtitle: Text(
-                        bit.body.split('\n').take(2).join('\n') +
-                            (bit.body.split('\n').length > 2 ? '...' : ''),
-                        style: const TextStyle(fontSize: 20.0), // Change text size here
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 8,
-                      ),
-                      minVerticalPadding: 10,
-                      visualDensity: VisualDensity.compact,
-                      dense: true,
-                      onTap: bit.id != 'not-found'
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => EditBitScreen(bit: bit),
-                                ),
-                              );
-                            }
-                          : null,
-                    );
+                child: ReorderableListView(
+                  onReorder: (int oldIndex, int newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) {
+                        newIndex -= 1;
+                      }
+                      final String bitId = widget.setList.bits.removeAt(oldIndex);
+                      widget.setList.bits.insert(newIndex, bitId);
+                      widget.setList.updatedAt = DateTime.now();
+                      setListProvider.updateSetList(widget.setList);
+                    });
                   },
+                  children: [
+                    for (int index = 0; index < widget.setList.bits.length; index++)
+                      _buildBitTile(context, bitProvider, widget.setList.bits[index], index),
+                  ],
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBitTile(BuildContext context, BitProvider bitProvider, String bitId, int index) {
+    final bit = bitProvider.bits.firstWhere(
+      (b) => b.id == bitId,
+      orElse: () => Bit(
+        id: 'not-found',
+        title: 'Bit Not Found',
+        body: 'This bit has been deleted.',
+        userId: 'unknown',
+        createdAt: Timestamp.fromDate(DateTime.now()),
+        updatedAt: Timestamp.fromDate(DateTime.now()),
+      ),
+    );
+
+    return ListTile(
+      key: ValueKey(bitId),
+      title: Text(
+        bit.title,
+        style: const TextStyle(fontSize: 24.0), // Change text size here
+      ),
+      subtitle: Text(
+        bit.body.split('\n').take(2).join('\n') +
+            (bit.body.split('\n').length > 2 ? '...' : ''),
+        style: const TextStyle(fontSize: 20.0), // Change text size here
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        vertical: 4,
+        horizontal: 8,
+      ),
+      minVerticalPadding: 10,
+      visualDensity: VisualDensity.compact,
+      dense: true,
+      onTap: bit.id != 'not-found'
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditBitScreen(bit: bit),
+                ),
+              );
+            }
+          : null,
     );
   }
 }

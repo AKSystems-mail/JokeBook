@@ -44,6 +44,17 @@ class SetListProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void reorderBitsInSetList(String setListId, int oldIndex, int newIndex) {
+    final setList = _setLists.firstWhere((setList) => setList.id == setListId);
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final String bitId = setList.bits.removeAt(oldIndex);
+    setList.bits.insert(newIndex, bitId);
+    setList.updatedAt = DateTime.now();
+    updateSetList(setList);
+  }
+
   void duplicateSetList(SetList setList, String newName, DateTime newDate) {
     final newSetList = SetList(
       id: DateTime.now().toString(),
