@@ -1,9 +1,13 @@
+import 'package:logging/logging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '/providers/settings_provider.dart';
+final _log = Logger('AuthScreen'); // Create a logger instance
 
-class AuthScreen extends StatefulWidget {
+class AuthScreen extends StatefulWidget{
   const AuthScreen({super.key});
 
   @override
@@ -49,7 +53,7 @@ class AuthScreenState extends State<AuthScreen> {
           _isLoading = false;
         });
       }
-      print("Error checking user: $e");
+      _log.info("Error checking user: $e");
     }
   }
 
@@ -74,7 +78,7 @@ class AuthScreenState extends State<AuthScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+           ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error logging in: $e')),
         );
       }
@@ -209,46 +213,51 @@ class AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('JokeBook'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: settingsProvider.backgroundColor,
+            title: const Text('JokeBook'),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                      ),
+                      TextField(
+                        controller: _passwordController,
+                        decoration: const InputDecoration(labelText: 'Password'),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _signInWithEmailPassword,
+                        child: const Text('Sign in with Email/Password'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _signInWithGoogle,
+                        child: const Text('Sign in with Google'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _showCreateAccountDialog,
+                        child: const Text('Create Account'),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(loginMessage), // Display _loginMessage
+                    ],
                   ),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _signInWithEmailPassword,
-                    child: const Text('Sign in with Email/Password'),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: _signInWithGoogle,
-                    child: const Text('Sign in with Google'),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: _showCreateAccountDialog,
-                    child: const Text('Create Account'),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(loginMessage), // Display _loginMessage
-                ],
-              ),
-      ),
+          ),
+        );
+      },
     );
   }
 

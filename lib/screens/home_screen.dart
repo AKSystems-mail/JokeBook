@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/providers/settings_provider.dart';
-
 import 'auth_screen.dart';
 import 'bits_screen.dart';
 import 'calendar_screen.dart';
 import 'recordings_screen.dart';
 import 'set_lists_screen.dart';
+
+const String AKComedy = 'AKComedy'; // Define your CashApp username as a constant
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,8 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _showSettingsPopup() {
-    Color tempColor =
-        Provider.of<SettingsProvider>(context, listen: false).tempColor;
+    Color tempColor = Provider.of<SettingsProvider>(context, listen: false).tempColor;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -57,8 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       await FirebaseAuth.instance.signOut();
                       if (!mounted) return;
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                            builder: (context) => const AuthScreen()),
+                        MaterialPageRoute(builder: (context) => const AuthScreen()),
                       );
                     },
                     child: const Text('Sign Out'),
@@ -66,13 +66,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               actions: <Widget>[
-                TextButton(
-                  child: const Text('Close'),
-                  onPressed: () {
-                    Provider.of<SettingsProvider>(context, listen: false)
-                        .updateBackgroundColor(tempColor);
-                    Navigator.of(context).pop();
-                  },
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        // Use the constant in your URL string
+                        final Uri cashAppUri = Uri.parse('https://cash.app/$AKComedy');
+                        launchUrl(cashAppUri);
+                      },
+                      child: const Text(
+                        'Buy me a bagel...',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      child: const Text('Close'),
+                      onPressed: () {
+                        Provider.of<SettingsProvider>(context, listen: false)
+                            .updateBackgroundColor(tempColor);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
                 ),
               ],
             );
