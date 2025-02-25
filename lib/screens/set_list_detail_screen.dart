@@ -41,9 +41,32 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
         _selectedDate = picked;
         widget.setList.date = picked;
         widget.setList.updatedAt = DateTime.now();
-        Provider.of<SetListProvider>(context, listen: false).updateSetList(widget.setList);
+        Provider.of<SetListProvider>(context, listen: false)
+            .updateSetList(widget.setList);
       });
     }
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(BuildContext context, String title) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Bit'),
+          content: Text('Are you sure you want to delete "$title"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
   }
 
   @override
@@ -75,27 +98,15 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
         actions: <Widget>[
           Padding(
             padding: const EdgeInsets.all(12.0),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                padding: EdgeInsets.zero,
-              ),
+            child: RecordingButton(
+              isRecording: recordingsProvider.isRecording(),
               onPressed: () {
                 if (recordingsProvider.isRecording()) {
                   recordingsProvider.stopRecording(context);
                 } else {
-                  recordingsProvider.startRecording(
-                      widget.setList.title, widget.setList.id);
+                  recordingsProvider.startRecording(widget.setList.title, widget.setList.id);
                 }
               },
-              child: Icon(
-                recordingsProvider.isRecording()
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                color: Colors.red,
-                size: 40.0,
-              ),
             ),
           ),
           Center(
@@ -106,6 +117,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
+                  fontSize: 24, // Increase the font size here
                 ),
               ),
             ),
@@ -137,15 +149,19 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                       if (newIndex > oldIndex) {
                         newIndex -= 1;
                       }
-                      final String bitId = widget.setList.bits.removeAt(oldIndex);
+                      final String bitId =
+                          widget.setList.bits.removeAt(oldIndex);
                       widget.setList.bits.insert(newIndex, bitId);
                       widget.setList.updatedAt = DateTime.now();
                       setListProvider.updateSetList(widget.setList);
                     });
                   },
                   children: [
-                    for (int index = 0; index < widget.setList.bits.length; index++)
-                      _buildBitTile(context, bitProvider, widget.setList.bits[index], index),
+                    for (int index = 0;
+                        index < widget.setList.bits.length;
+                        index++)
+                      _buildBitTile(context, bitProvider,
+                          widget.setList.bits[index], index),
                   ],
                 ),
               ),
@@ -156,7 +172,8 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
     );
   }
 
-  Widget _buildBitTile(BuildContext context, BitProvider bitProvider, String bitId, int index) {
+  Widget _buildBitTile(
+      BuildContext context, BitProvider bitProvider, String bitId, int index) {
     final bit = bitProvider.bits.firstWhere(
       (b) => b.id == bitId,
       orElse: () => Bit(
@@ -169,34 +186,211 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
       ),
     );
 
-    return ListTile(
+    return Dismissible(
       key: ValueKey(bitId),
-      title: Text(
-        bit.title,
-        style: const TextStyle(fontSize: 24.0), // Change text size here
+      background: Container(
+        color: Colors.green,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20.0),
+        child: const Icon(Icons.swap_horiz, color: Colors.white, size: 40.0), // Increase the size here
       ),
-      subtitle: Text(
-        bit.body.split('\n').take(2).join('\n') +
-            (bit.body.split('\n').length > 2 ? '...' : ''),
-        style: const TextStyle(fontSize: 20.0), // Change text size here
+      secondaryBackground: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        child: const Icon(Icons.delete, color: Colors.white, size: 40.0), // Increase the size here
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        vertical: 4,
-        horizontal: 8,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Replace action
+          _showReplaceBitDialog(context, bitProvider, index);
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          // Delete action
+          final confirmDelete = await _showDeleteConfirmationDialog(context, bit.title);
+          if (confirmDelete) {
+            setState(() {
+              widget.setList.bits.removeAt(index);
+              widget.setList.updatedAt = DateTime.now();
+              Provider.of<SetListProvider>(context, listen: false)
+                  .updateSetList(widget.setList);
+            });
+            return true;
+          }
+          return false;
+        }
+        return false;
+      },
+      child: ListTile(
+        title: Text(bit.title, style: const TextStyle(fontSize: 24.0)),
+        subtitle: Text(
+          bit.body.split('\n').take(2).join('\n') +
+              (bit.body.split('\n').length > 2 ? '...' : ''),
+          style: const TextStyle(fontSize: 20.0),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        minVerticalPadding: 10,
+        visualDensity: VisualDensity.compact,
+        dense: true,
+        onTap: bit.id != 'not-found'
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditBitScreen(bit: bit),
+                  ),
+                );
+              }
+            : null,
       ),
-      minVerticalPadding: 10,
-      visualDensity: VisualDensity.compact,
-      dense: true,
-      onTap: bit.id != 'not-found'
-          ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditBitScreen(bit: bit),
+    );
+  }
+
+  void _showReplaceBitDialog(
+      BuildContext context, BitProvider bitProvider, int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        List<String> selectedBits = [];
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Replace Bit'),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: bitProvider.bits.map((bit) {
+                    return CheckboxListTile(
+                      title: Text(bit.title),
+                      value: selectedBits.contains(bit.id),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value == true) {
+                            selectedBits.add(bit.id);
+                          } else {
+                            selectedBits.remove(bit.id);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
                 ),
-              );
-            }
-          : null,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      widget.setList.bits.removeAt(index);
+                      widget.setList.bits.insertAll(index, selectedBits);
+                      widget.setList.updatedAt = DateTime.now();
+                      Provider.of<SetListProvider>(context, listen: false)
+                          .updateSetList(widget.setList);
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class RecordingButton extends StatefulWidget {
+  final bool isRecording;
+  final VoidCallback onPressed;
+
+  const RecordingButton({
+    Key? key,
+    required this.isRecording,
+    required this.onPressed,
+  }) : super(key: key);
+
+  @override
+  _RecordingButtonState createState() => _RecordingButtonState();
+}
+
+class _RecordingButtonState extends State<RecordingButton> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _sizeAnimation;
+  late Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _sizeAnimation = Tween<double>(begin: 50.0, end: 45.0).animate(_animationController);
+    _colorAnimation = ColorTween(begin: Colors.grey, end: Colors.red).animate(_animationController);
+
+    if (widget.isRecording) {
+      _animationController.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant RecordingButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRecording) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onPressed,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Container(
+            width: _sizeAnimation.value,
+            height: _sizeAnimation.value,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _colorAnimation.value,
+              border: Border.all(color: Colors.black, width: 2.0),
+              boxShadow: widget.isRecording
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        spreadRadius: -2,
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Center(
+              child: Icon(
+                widget.isRecording ? Icons.circle : Icons.circle_outlined,
+                color: Colors.white,
+                size: 24.0,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

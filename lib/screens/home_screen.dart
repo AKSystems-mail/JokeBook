@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSettingsPopup() {
     Color tempColor = Provider.of<SettingsProvider>(context, listen: false).tempColor;
+    double sliderValue = Provider.of<SettingsProvider>(context, listen: false).colorToSliderValue(tempColor);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -42,14 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text('Adjust Background Color'),
-                  ColorSlider(
-                    color: tempColor,
-                    onColorChanged: (Color newColor) {
+                  Slider(
+                    value: sliderValue,
+                    min: 0,
+                    max: 1,
+                    onChanged: (value) {
                       setState(() {
-                        tempColor = newColor;
+                        sliderValue = value;
+                        tempColor = Provider.of<SettingsProvider>(context, listen: false).sliderValueToColor(value);
                       });
-                      Provider.of<SettingsProvider>(context, listen: false)
-                          .setTempColor(newColor);
+                      Provider.of<SettingsProvider>(context, listen: false).setTempColor(tempColor);
                     },
                   ),
                   const SizedBox(height: 20),
@@ -163,95 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         );
-      },
-    );
-  }
-}
-
-// Custom ColorSlider Widget (in home_screen.dart)
-class ColorSlider extends StatefulWidget {
-  final Color color;
-  final ValueChanged<Color> onColorChanged;
-
-  const ColorSlider(
-      {super.key, required this.color, required this.onColorChanged});
-
-  @override
-  State<ColorSlider> createState() => _ColorSliderState();
-}
-
-class _ColorSliderState extends State<ColorSlider> {
-  late double _sliderValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _sliderValue = _colorToSliderValue(widget.color);
-  }
-
-  double _colorToSliderValue(Color color) {
-    const Color startColor = Color(0xFFFFFFFF); // White
-    const Color endColor = Color(0xFFF4E204); // Yellow
-
-    int startR = startColor.red;
-    int startG = startColor.green;
-    int startB = startColor.blue;
-
-    int endR = endColor.red;
-    int endG = endColor.green;
-    int endB = endColor.blue;
-
-    int currentR = color.red;
-    int currentG = color.green;
-    int currentB = color.blue;
-
-    double rPos = (currentR - startR) / (endR - startR).toDouble();
-    double gPos = (currentG - startG) / (endG - startG).toDouble();
-    double bPos = (currentB - startB) / (endB - startB).toDouble();
-
-    return (rPos + gPos + bPos) / 3;
-  }
-
-  Color _sliderValueToColor(double value) {
-    const Color startColor = Color(0xFFFFFFFF); // White
-    const Color endColor = Color(0xFFF4E204); // Yellow
-
-    value = value.clamp(0.0, 1.0);
-
-    int startR = startColor.red;
-    int startG = startColor.green;
-    int startB = startColor.blue;
-
-    int endR = endColor.red;
-    int endG = endColor.green;
-    int endB = endColor.blue;
-
-    int r = (startR + (endR - startR) * value).round();
-    int g = (startG + (endG - startG) * value).round();
-    int b = (startB + (endB - startB) * value).round();
-
-    return Color.fromARGB(255, r, g, b);
-  }
-
-  @override
-  void didUpdateWidget(covariant ColorSlider oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.color != widget.color) {
-      _sliderValue = _colorToSliderValue(widget.color);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Slider(
-      value: _sliderValue,
-      min: 0,
-      max: 1,
-      onChanged: (value) {
-        setState(() {
-          _sliderValue = value;
-        });
-        widget.onColorChanged(_sliderValueToColor(value));
       },
     );
   }

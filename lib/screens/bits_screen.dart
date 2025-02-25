@@ -38,6 +38,7 @@ class BitsScreen extends StatelessWidget {
               ),
             ],
           ),
+          backgroundColor: settingsProvider.backgroundColor,
           body: bitProvider.bits.isEmpty
               ? const Center(child: Text("No new bits yet, Get to writing!"))
               : ReorderableListView.builder(

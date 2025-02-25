@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/recordings_provider.dart';
 import '../providers/settings_provider.dart';
-import 'package:audioplayers/audioplayers.dart'; // Add this dependency
+import 'package:just_audio/just_audio.dart'; // Add this dependency
 import '../models/recording.dart'; // Add this import statement
 import 'package:intl/intl.dart'; // Add this import statement
+import 'dart:io'; // Add this import statement
 
 class RecordingsScreen extends StatefulWidget {
   const RecordingsScreen({super.key});
@@ -28,10 +29,23 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 300),
     );
 
-    _audioPlayer.onPositionChanged.listen((Duration position) {
+    _audioPlayer.positionStream.listen((Duration position) {
       setState(() {
         _elapsedTime = position;
       });
+    });
+
+    _audioPlayer.playerStateStream.listen((PlayerState state) {
+      if (state.playing) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+
+    // Add listener to update UI when audioUrl is updated
+    Provider.of<RecordingsProvider>(context, listen: false).addListener(() {
+      setState(() {});
     });
   }
 
@@ -42,10 +56,36 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
     return '$minutes:$seconds';
   }
 
-  Future<Duration> _getRecordingDuration(String url) async {
-    await _audioPlayer.setSourceUrl(url);
-    final result = await _audioPlayer.getDuration();
-    return Duration(milliseconds: result!.inMilliseconds);
+  Future<Duration> _getRecordingDuration(Recording recording) async {
+    final player = AudioPlayer();
+    if (File(recording.filePath).existsSync()) {
+      await player.setFilePath(recording.filePath);
+    } else {
+      await player.setUrl(recording.audioUrl);
+    }
+    return player.duration ?? Duration.zero;
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(BuildContext context, String title) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Recording'),
+          content: Text('Are you sure you want to delete "$title"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
   }
 
   @override
@@ -66,12 +106,15 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
                 ),
                 onPressed: _selectedRecording != null
                     ? () async {
-                        if (_audioPlayer.state == PlayerState.playing) {
+                        if (_audioPlayer.playing) {
                           await _audioPlayer.pause();
-                          _animationController.reverse();
                         } else {
-                          await _audioPlayer.play(UrlSource(_selectedRecording!.audioUrl));
-                          _animationController.forward();
+                          if (File(_selectedRecording!.filePath).existsSync()) {
+                            await _audioPlayer.setFilePath(_selectedRecording!.filePath);
+                          } else {
+                            await _audioPlayer.setUrl(_selectedRecording!.audioUrl);
+                          }
+                          await _audioPlayer.play();
                         }
                       }
                     : null,
@@ -81,7 +124,6 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
                 onPressed: _selectedRecording != null
                     ? () async {
                         await _audioPlayer.stop();
-                        _animationController.reverse();
                         setState(() {
                           _elapsedTime = Duration.zero;
                         });
@@ -90,12 +132,13 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
               ),
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 25.0),
                   child: Text(
                     _formatDuration(_elapsedTime),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
+                      fontSize: 20, // Increase the font size here
                     ),
                   ),
                 ),
@@ -110,13 +153,16 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
                     final recording = recordingsProvider.recordings[index];
                     final formattedDate = DateFormat('MM/dd/yyyy hh:mm a').format(recording.createdAt.toDate());
                     return FutureBuilder<Duration>(
-                      future: _getRecordingDuration(recording.audioUrl),
+                      future: _getRecordingDuration(recording),
                       builder: (context, snapshot) {
                         final duration = snapshot.data ?? Duration.zero;
                         final formattedDuration = _formatDuration(duration);
                         return Dismissible(
                           key: Key(recording.id),
                           direction: DismissDirection.endToStart,
+                          confirmDismiss: (direction) async {
+                            return await _showDeleteConfirmationDialog(context, recording.title);
+                          },
                           onDismissed: (direction) async {
                             await recordingsProvider.deleteRecording(recording);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +176,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
                             child: const Icon(Icons.delete, color: Colors.white),
                           ),
                           child: ListTile(
+                            tileColor: _selectedRecording == recording ? Colors.blue.shade100 : null,
                             title: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -138,7 +185,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> with SingleTickerPr
                               ],
                             ),
                             subtitle: Text(formattedDate),
-                            onTap: () {
+                            onTap: () async {
+                              recordingsProvider.setActiveRecording(recording); // Call without using the return value
                               setState(() {
                                 _selectedRecording = recording;
                               });

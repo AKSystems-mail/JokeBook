@@ -1,26 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:logging/logging.dart';
+import 'package:flutter/material.dart';
 import '../models/recording.dart';
 import '../services/firestore_service.dart';
-import '../models/set_list.dart'; // Import SetList
-import 'package:logging/logging.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../models/set_list.dart';
 
 class RecordingsProvider with ChangeNotifier {
   final FlutterSoundRecorder _mRecorder = FlutterSoundRecorder();
   final _log = Logger('RecordingsProvider');
-  final FlutterSoundPlayer _mPlayer = FlutterSoundPlayer();
   bool _isRecording = false;
-  bool _isPlaying = false;
   String currentRecordingTitle = '';
   DateTime? startTime;
-  String? currentSetListId;
   Timer? _timer;
   Duration _currentDuration = Duration.zero;
   List<Recording> recordings = [];
@@ -29,7 +26,6 @@ class RecordingsProvider with ChangeNotifier {
   bool _isLoading = false;
 
   Duration get currentDuration => _currentDuration;
-  FlutterSoundPlayer get player => _mPlayer;
   bool get isLoading => _isLoading;
 
   String get formattedRecordingDuration {
@@ -100,15 +96,15 @@ class RecordingsProvider with ChangeNotifier {
 
           // Add the recording to the local list
           recordings.add(activeRecording!);
+
+          // Notify listeners after the upload is complete
           notifyListeners();
         }
-        } catch (e) {
+      } catch (e) {
         _log.warning("Error stopping and saving recording: $e");
       }
     }
   }
-
-  bool isRecording() => _isRecording;
 
   Future<String> getAudioFile(String? setListId) async {
     String newRecordingTitle;
@@ -134,115 +130,6 @@ class RecordingsProvider with ChangeNotifier {
     String tempPath = tempDir.path;
     String filePath = '$tempPath/${DateTime.now().millisecondsSinceEpoch}.aac';
     return filePath;
-  }
-
-  Future<void> togglePlayPause() async {
-    if (activeRecording != null) {
-      if (_isPlaying) {
-        _stopSubscription();
-      } else {
-        _startSubscription();
-      }
-    }
-  }
-
-  Future<void> startPlayer() async {
-    if (activeRecording != null && activeRecording!.audioUrl.isNotEmpty) {
-      await _mPlayer.startPlayer(fromURI: activeRecording!.audioUrl);
-    } else {
-      _log.warning("No audio URL available to play.");
-    }
-  }
-
-  Future<void> showRecordingConfirmationDialog(
-      BuildContext context, String recordingTitle) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Save Recording?'),
-          content: Text(
-              'Would you like to save this recording as:\n"$recordingTitle"?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Call the saveRecording method
-                addRecording(recordingTitle);
-              },
-              child: const Text('Yes'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> addRecording(String recordingTitle) async {
-    if (activeRecording != null) {
-      try {
-        // Upload the recording to Firebase Storage
-        File recordingFile = File(activeRecording!.filePath);
-        String storagePath = 'recordings/${activeRecording!.id}.aac';
-        UploadTask uploadTask = FirebaseStorage.instance
-            .ref()
-            .child(storagePath)
-            .putFile(recordingFile);
-
-        TaskSnapshot taskSnapshot = await uploadTask;
-        String downloadUrl = await taskSnapshot.ref.getDownloadURL();
-
-        // Update the recording with the download URL
-        activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
-
-        // Save the recording details to Firestore
-        await FirestoreService().addRecording(activeRecording!);
-
-        // Add the recording to the local list
-        recordings.add(activeRecording!);
-        notifyListeners();
-      } catch (e) {
-        _log.warning("Error uploading recording: $e");
-      }
-    }
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _currentDuration = DateTime.now().difference(startTime!);
-      notifyListeners();
-    });
-  }
-
-  void _stopTimer() {
-    _timer?.cancel();
-  }
-
-  void _startSubscription() async {
-    if (activeRecording != null && activeRecording!.audioUrl.isNotEmpty) {
-      await _mPlayer.startPlayer(
-        fromURI: activeRecording!.audioUrl,
-        whenFinished: () {
-          _isPlaying = false;
-          notifyListeners();
-        },
-      );
-      _isPlaying = true;
-      notifyListeners();
-    }
-  }
-
-  void _stopSubscription() async {
-    if (_mPlayer.isPlaying) {
-      await _mPlayer.stopPlayer();
-      _isPlaying = false;
-      notifyListeners();
-    }
   }
 
   Future<void> initRecorder() async {
@@ -278,5 +165,18 @@ class RecordingsProvider with ChangeNotifier {
     } catch (e) {
       _log.warning("Error deleting recording: $e");
     }
+  }
+
+  bool isRecording() => _isRecording;
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _currentDuration = DateTime.now().difference(startTime!);
+      notifyListeners();
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
   }
 }
