@@ -55,7 +55,8 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
-          Provider.of<SetListProvider>(context, listen: false).addSetList(newSetList);
+          Provider.of<SetListProvider>(context, listen: false)
+              .addSetList(newSetList);
         }
         return true; // Allow navigation
       },
@@ -76,6 +77,7 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
                       controller: _titleController,
                       decoration: const InputDecoration(labelText: 'Title'),
                       validator: (value) {
+                        TextCapitalization.sentences;
                         if (value == null || value.isEmpty) {
                           return 'Please enter a title';
                         }
@@ -84,7 +86,8 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
                     ),
                     Row(
                       children: [
-                        Text("Date: ${DateFormat('MM/dd/yy').format(_selectedDate)}"),
+                        Text(
+                            "Date: ${DateFormat('MM/dd/yy').format(_selectedDate)}"),
                         TextButton(
                           onPressed: () => _selectDate(context),
                           child: const Text('Select Date'),
@@ -92,10 +95,13 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text("Select Bits:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text("Select Bits:",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     Expanded(
                       child: bitProvider.bits.isEmpty
-                          ? const Center(child: Text("No bits available, create a bit first"))
+                          ? const Center(
+                              child:
+                                  Text("No bits available, create a bit first"))
                           : ListView.builder(
                               itemCount: bitProvider.bits.length,
                               itemBuilder: (context, index) {
