@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Recording {
@@ -8,6 +7,7 @@ class Recording {
   final String setListId;
   final String audioUrl;
   final Timestamp createdAt;
+  final Duration duration; // Add this field
 
   Recording({
     required this.id,
@@ -16,6 +16,7 @@ class Recording {
     required this.setListId,
     required this.audioUrl,
     required this.createdAt,
+    required this.duration, // Add this field
   });
 
   Recording copyWith({
@@ -25,6 +26,7 @@ class Recording {
     String? setListId,
     String? audioUrl,
     Timestamp? createdAt,
+    Duration? duration, // Add this field
   }) {
     return Recording(
       id: id ?? this.id,
@@ -33,6 +35,7 @@ class Recording {
       setListId: setListId ?? this.setListId,
       audioUrl: audioUrl ?? this.audioUrl,
       createdAt: createdAt ?? this.createdAt,
+      duration: duration ?? this.duration, // Add this field
     );
   }
 
@@ -45,6 +48,7 @@ class Recording {
       setListId: data['setListId'] ?? '',
       audioUrl: data['audioUrl'] ?? '',
       createdAt: data['createdAt'],
+      duration: Duration(seconds: data['duration'] ?? 0), // Add this field
     );
   }
 
@@ -55,6 +59,7 @@ class Recording {
       'setListId': setListId,
       'audioUrl': audioUrl,
       'createdAt': createdAt,
+      'duration': duration.inSeconds, // Add this field
     };
   }
 }

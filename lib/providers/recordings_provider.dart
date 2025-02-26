@@ -11,6 +11,9 @@ import 'package:flutter/material.dart';
 import '../models/recording.dart';
 import '../services/firestore_service.dart';
 import '../models/set_list.dart';
+import 'package:just_audio/just_audio.dart';
+import 'dart:io' as io; // Use alias to differentiate between dart:io and dart:html
+import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb to check platform
 
 class RecordingsProvider with ChangeNotifier {
   final FlutterSoundRecorder _mRecorder = FlutterSoundRecorder();
@@ -53,6 +56,7 @@ class RecordingsProvider with ChangeNotifier {
         setListId: setListId ?? '',
         audioUrl: '',
         createdAt: Timestamp.fromDate(DateTime.now()),
+        duration: Duration.zero, // Initialize duration
       );
       startTime = DateTime.now();
       _startTimer();
@@ -139,11 +143,38 @@ class RecordingsProvider with ChangeNotifier {
   Future<void> fetchRecordings() async {
     try {
       List<Recording> recordingsList = await FirestoreService().getRecordings();
+      for (var i = 0; i < recordingsList.length; i++) {
+        final duration = await _getRecordingDuration(recordingsList[i]);
+        recordingsList[i] = recordingsList[i].copyWith(duration: duration);
+      }
       recordings = recordingsList;
       notifyListeners();
     } catch (e) {
       _log.warning("Error fetching recordings: $e");
     }
+  }
+
+  Future<Duration> _getRecordingDuration(Recording recording) async {
+    final player = AudioPlayer();
+    final completer = Completer<Duration>();
+
+    player.durationStream.listen((duration) {
+      if (duration != null && !completer.isCompleted) {
+        completer.complete(duration);
+      }
+    });
+
+    if (kIsWeb) {
+      await player.setUrl(recording.audioUrl);
+    } else {
+      if (io.File(recording.filePath).existsSync()) {
+        await player.setFilePath(recording.filePath);
+      } else {
+        await player.setUrl(recording.audioUrl);
+      }
+    }
+
+    return completer.future;
   }
 
   void setActiveRecording(Recording recording) {

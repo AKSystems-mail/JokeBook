@@ -1,0 +1,6 @@
+import 'package:mockito/annotations.dart';
+import 'package:jokebook/services/firestore_service.dart';
+import 'package:just_audio/just_audio.dart';
+
+@GenerateMocks([FirestoreService, AudioPlayer])
+void main() {}

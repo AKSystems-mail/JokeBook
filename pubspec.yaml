@@ -58,6 +58,7 @@ dev_dependencies:
   dwds: ^24.2.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.8
+  mockito: ^5.0.0
   flutter_test:
     sdk: flutter
 
