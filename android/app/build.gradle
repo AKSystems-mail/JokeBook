@@ -24,8 +24,8 @@ android {
         applicationId "com.jokebook.app"
         minSdk 24
         targetSdk 34
-        versionCode 2  // You can set a version code here if needed
-        versionName "2.1.05 Stable"
+        versionCode 3  // You can set a version code here if needed
+        versionName "2.1.06 Stable"
     }
 
 signingConfigs {
