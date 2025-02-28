@@ -122,6 +122,12 @@ class BitsScreen extends StatelessWidget {
                     }
                     bitProvider.reorderBits(oldIndex, newIndex);
                   },
+                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: child,
+                    );
+                  },
                 ),
         );
       },

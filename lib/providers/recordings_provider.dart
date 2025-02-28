@@ -25,8 +25,8 @@ class RecordingsProvider with ChangeNotifier {
   Duration _currentDuration = Duration.zero;
   List<Recording> recordings = [];
   Recording? activeRecording;
-  bool isDisposed = false;
-  bool _isLoading = false;
+  bool isDisposed = false; // Flag to indicate if the provider is disposed.
+  bool _isLoading = false; // Flag to indicate if loading is in progress.
 
   Duration get currentDuration => _currentDuration;
   bool get isLoading => _isLoading;
