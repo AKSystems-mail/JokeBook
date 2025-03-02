@@ -42,7 +42,7 @@ dependencies:
   shared_preferences: ^2.2.21
   path_provider: ^2.1.0  
   table_calendar: ^3.2.0
-  wakelock: ^0.5.06+2
+  wakelock_plus: ^1.2.10
   logging: ^1.2.0
   # The following adds the Cupertino Icons font to your application.
   flutter_sound: ^9.5.2
