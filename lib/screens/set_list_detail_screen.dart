@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock/wakelock.dart';
 import '../models/set_list.dart';
 import '../providers/set_list_provider.dart';
 import '../models/bit.dart';
@@ -27,6 +28,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
     super.initState();
     _titleController = TextEditingController(text: widget.setList.title);
     _selectedDate = widget.setList.date;
+    Wakelock.enable();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -72,6 +74,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    Wakelock.disable();
     super.dispose();
   }
 
