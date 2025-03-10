@@ -107,7 +107,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
                       maxLines: null,
                       expands: true,
                       decoration: const InputDecoration(
-                        hintText: 'Write your bit here...',
+                        hintText: 'premise, setup, punch...',
                         border: InputBorder.none,
                       ),
                       textCapitalization: TextCapitalization.sentences,
