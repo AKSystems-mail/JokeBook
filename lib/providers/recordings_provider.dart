@@ -1,3 +1,5 @@
+// lib/providers/recordings_provider.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
@@ -41,13 +43,42 @@ class RecordingsProvider with ChangeNotifier {
 
   Future<void> startRecording(String recordingTitle, String? setListId) async {
     if (isDisposed) {
+      _log.warning("Attempted to start recording on disposed provider.");
       return; // Do nothing if the provider is disposed
     }
-    if (await Permission.microphone.request().isGranted) {
-      await initRecorder();
-      String filePath = await getAudioFile(setListId);
+    var status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+       _log.severe("Microphone permission not granted.");
+       // Optionally show a message to the user
+       throw RecordingPermissionException("Microphone permission not granted");
+    }
+
+    // Ensure previous recording is stopped if any state inconsistency occurred
+    if (_mRecorder.isRecording || _isRecording) {
+       _log.warning("Recorder state indicates recording, attempting stop before starting new one.");
+       await _mRecorder.stopRecorder();
+       _isRecording = false;
+       _stopTimer(); // Ensure timer is stopped too
+    }
+
+
+    await initRecorder(); // Ensure recorder is open
+    String filePath = await getAudioFile(setListId); // Ensure this generates .aac path
+
+    try {
+      _log.info("Starting recorder with enhanced quality settings...");
       await _mRecorder.startRecorder(
-          toFile: filePath, codec: Codec.aacADTS); // Specify codec
+          toFile: filePath,
+          codec: Codec.aacADTS, // Keep AAC for compatibility
+          // --- Quality Adjustments ---
+          sampleRate: 44100,     // Use CD quality sample rate (adjust if needed, e.g., 48000)
+          bitRate: 192000,      // Increase bitrate to 192 kbps (common good quality)
+                                // You can try 128000 (128kbps) or 256000 (256kbps)
+          numChannels: 1        // Set to 1 for mono (smaller files), use 2 for stereo if needed
+          // -------------------------
+      );
+
+           // Specify codec
       _isRecording = true;
       activeRecording = Recording(
         id: DateTime.now().toString(),
@@ -61,6 +92,16 @@ class RecordingsProvider with ChangeNotifier {
       startTime = DateTime.now();
       _startTimer();
       notifyListeners();
+    } catch (e) {
+       _log.severe("Error starting recorder: $e");
+       // Reset state if start failed
+       _isRecording = false;
+       activeRecording = null;
+       startTime = null;
+       _stopTimer();
+       notifyListeners();
+       // Rethrow or handle the error appropriately
+       throw Exception("Failed to start recording: ${e.toString()}");
     }
   }
 

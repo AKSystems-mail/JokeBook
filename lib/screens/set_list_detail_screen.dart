@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/set_list.dart';
 import '../providers/set_list_provider.dart';
@@ -103,7 +104,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
             padding: const EdgeInsets.all(12.0),
             child: RecordingButton(
               isRecording: recordingsProvider.isRecording(),
-              onPressed: () {
+              onPressed: () {                HapticFeedback.mediumImpact();
                 if (recordingsProvider.isRecording()) {
                   recordingsProvider.stopRecording(context);
                 } else {
@@ -203,27 +204,33 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
         padding: const EdgeInsets.only(right: 20.0),
         child: const Icon(Icons.delete, color: Colors.white, size: 40.0), // Increase the size here
       ),
-      confirmDismiss: (direction) async {
+       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          // Replace action
-          _showReplaceBitDialog(context, bitProvider, index);
-          return false;
+          // Replace/Add action
+          // --- MODIFICATION: Pass bitId to the dialog ---
+          _showReplaceBitDialog(context, bitProvider, index, bitId);
+          return false; // Prevent dismissal, dialog handles action
         } else if (direction == DismissDirection.endToStart) {
           // Delete action
-          final confirmDelete = await _showDeleteConfirmationDialog(context, bit.title);
-          if (confirmDelete) {
-            setState(() {
-              widget.setList.bits.removeAt(index);
-              widget.setList.updatedAt = DateTime.now();
-              Provider.of<SetListProvider>(context, listen: false)
-                  .updateSetList(widget.setList);
-            });
-            return true;
-          }
-          return false;
+          // ... (delete confirmation logic remains the same) ...
+           final confirmDelete = await _showDeleteConfirmationDialog(context, bit.title);
+           if (confirmDelete) {
+             setState(() {
+               widget.setList.bits.removeAt(index);
+               widget.setList.updatedAt = DateTime.now();
+               Provider.of<SetListProvider>(context, listen: false)
+                   .updateSetList(widget.setList);
+             });
+             // Return false because we manually updated state.
+             // If provider update was guaranteed to rebuild immediately, could return true.
+             // Returning false is safer here to avoid potential animation glitches.
+             return false;
+           }
+           return false;
         }
         return false;
       },
+
       child: ListTile(
         title: Text(bit.title, style: const TextStyle(fontSize: 24.0)),
         subtitle: Text(
@@ -249,19 +256,18 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
     );
   }
 
-  void _showReplaceBitDialog(
-      BuildContext context, BitProvider bitProvider, int index) {
+  void _showReplaceBitDialog(BuildContext context, BitProvider bitProvider, int index, String bitId) {
     showDialog(
       context: context,
       builder: (context) {
-        List<String> selectedBits = [];
-
         return StatefulBuilder(
+            
           builder: (context, setState) {
+            List<String> selectedBits = [bitId];
             return AlertDialog(
               title: const Text('Replace Bit'),
               content: SingleChildScrollView(
-                child: Column(
+                child:  Column(
                   children: bitProvider.bits.map((bit) {
                     return CheckboxListTile(
                       title: Text(bit.title),
@@ -270,7 +276,8 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
                         setState(() {
                           if (value == true) {
                             selectedBits.add(bit.id);
-                          } else {
+                          }
+                           else {
                             selectedBits.remove(bit.id);
                           }
                         });

@@ -47,6 +47,7 @@ class SetList extends HiveObject {
         updatedAt: DateTime.now(),
       );
     }
+    
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
     if (!data['bits'].every((element) => element is String)) {
       _logger.info('Error: bits field contains non-string elements');

@@ -1,3 +1,5 @@
+// lib/providers/bit_provider.dart
+
 import 'package:flutter/material.dart';
 import '/models/bit.dart';
 import '/services/firestore_service.dart';

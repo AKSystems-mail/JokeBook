@@ -1,3 +1,5 @@
+// lib/services/firestore_service.dart  
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/models/bit.dart';
@@ -80,17 +82,19 @@ class FirestoreService {
     final user = _auth.currentUser;
     if (user == null) {
       _log.severe('User not authenticated!');
-      return Stream.empty(); // Return empty stream
+      return Stream.value([]);
     }
     final userId = user.uid;
     _log.info('Getting all set lists for user $userId');
     return _db
         .collection('users')
         .doc(userId)
-        .collection('setLists')
+        .collection('setlists') // Lowercase 'l' - ensure consistency
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       _log.fine('Received ${snapshot.docs.length} set lists from Firestore');
+      // *** CORRECTED: Pass the DocumentSnapshot directly ***
       return snapshot.docs.map((doc) => SetList.fromFirestore(doc)).toList();
     });
   }
@@ -101,14 +105,28 @@ class FirestoreService {
       _log.severe('User not authenticated!');
       throw Exception('User not authenticated!');
     }
-    final userId = user.uid;
-    _log.info('Adding set list with ID ${setList.id} for user $userId');
-    await _db
-        .collection('users')
-        .doc(userId)
-        .collection('setLists')
-        .doc(setList.id)
-        .set(setList.toFirestore()); // Use toFirestore()
+    final userId = user.uid; // Get userId for logging clarity
+
+    final Map<String, dynamic> dataToAdd = {
+      'title': setList.title,
+      'date': Timestamp.fromDate(setList.date),
+      'bits': setList.bits,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    try {
+       DocumentReference docRef = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('setlists') // Lowercase 'l' - correct
+          .add(dataToAdd);
+       _log.info('Added set list with ID: ${docRef.id} for user $userId');
+    } catch (e) {
+       _log.severe('Error adding set list for user $userId: $e');
+       // Rethrow or handle as appropriate
+       rethrow;
+    }
   }
 
   Future<void> updateSetList(SetList setList) async {
@@ -117,14 +135,32 @@ class FirestoreService {
       _log.severe('User not authenticated!');
       throw Exception('User not authenticated!');
     }
-    final userId = user.uid;
-    _log.info('Updating set list with ID ${setList.id} for user $userId');
-    await _db
-        .collection('users')
-        .doc(userId)
-        .collection('setLists')
-        .doc(setList.id)
-        .update(setList.toFirestore()); // Use toFirestore()
+     if (setList.id.isEmpty) {
+       _log.warning('Attempted to update set list with empty ID.');
+       throw Exception('SetList ID cannot be empty for update.');
+     }
+    final userId = user.uid; // Get userId for logging clarity
+
+    final Map<String, dynamic> dataToUpdate = {
+      'title': setList.title,
+      'date': Timestamp.fromDate(setList.date),
+      'bits': setList.bits,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('setlists') // Lowercase 'l' - correct
+          .doc(setList.id)
+          .update(dataToUpdate);
+      _log.info('Updated set list with ID: ${setList.id} for user $userId');
+    } catch (e) {
+       _log.severe('Error updating set list ${setList.id} for user $userId: $e');
+       // Rethrow or handle as appropriate
+       rethrow;
+    }
   }
 
   Future<void> deleteSetList(String setListId) async {

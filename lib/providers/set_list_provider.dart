@@ -1,6 +1,9 @@
+// lib/providers/set_list_provider.dart
+
 import 'package:flutter/material.dart';
 import '/models/set_list.dart';
 import '/services/firestore_service.dart';
+
 
 class SetListProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -51,7 +54,6 @@ class SetListProvider with ChangeNotifier {
     }
     final String bitId = setList.bits.removeAt(oldIndex);
     setList.bits.insert(newIndex, bitId);
-    setList.updatedAt = DateTime.now();
     updateSetList(setList);
   }
 
