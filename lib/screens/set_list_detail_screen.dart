@@ -104,7 +104,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
             padding: const EdgeInsets.all(12.0),
             child: RecordingButton(
               isRecording: recordingsProvider.isRecording(),
-              onPressed: () {                HapticFeedback.mediumImpact();
+              onPressed: () {HapticFeedback.heavyImpact();
                 if (recordingsProvider.isRecording()) {
                   recordingsProvider.stopRecording(context);
                 } else {
