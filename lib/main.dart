@@ -63,10 +63,10 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
                   .copyWith(secondary: const Color(0xFFADD8E6)),
               primarySwatch: Colors.blue,
-              scaffoldBackgroundColor: settingsProvider
-                  .backgroundColor, // Tie scaffold background color to SettingsProvider
-              appBarTheme: const AppBarTheme(
-                titleTextStyle: TextStyle(
+              scaffoldBackgroundColor: settingsProvider.backgroundColor, // Tie scaffold background color to SettingsProvider
+              appBarTheme: AppBarTheme(
+                backgroundColor: settingsProvider.backgroundColor, // Tie AppBar background color to SettingsProvider
+                titleTextStyle: const TextStyle(
                   fontFamily: 'PermanentMarker',
                   fontSize: 24,
                   fontWeight: FontWeight.normal,

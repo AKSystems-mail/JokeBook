@@ -89,7 +89,7 @@ class FirestoreService {
     return _db
         .collection('users')
         .doc(userId)
-        .collection('setlists') // Lowercase 'l' - ensure consistency
+        .collection('setLists') // Lowercase 'l' - ensure consistency
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -119,7 +119,7 @@ class FirestoreService {
        DocumentReference docRef = await _db
           .collection('users')
           .doc(userId)
-          .collection('setlists') // Lowercase 'l' - correct
+          .collection('setLists') // Lowercase 'l' - correct
           .add(dataToAdd);
        _log.info('Added set list with ID: ${docRef.id} for user $userId');
     } catch (e) {
@@ -152,7 +152,7 @@ class FirestoreService {
       await _db
           .collection('users')
           .doc(userId)
-          .collection('setlists') // Lowercase 'l' - correct
+          .collection('setLists') // Lowercase 'l' - correct
           .doc(setList.id)
           .update(dataToUpdate);
       _log.info('Updated set list with ID: ${setList.id} for user $userId');

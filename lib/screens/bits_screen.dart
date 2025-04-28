@@ -16,7 +16,7 @@ class BitsScreen extends StatelessWidget {
       builder: (context, settingsProvider, child) {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: settingsProvider.backgroundColor,
+            backgroundColor: settingsProvider.backgroundColor, // Tie AppBar background color to SettingsProvider
             title: const Text('Bits'),
             actions: [
               Padding(
@@ -38,7 +38,6 @@ class BitsScreen extends StatelessWidget {
               ),
             ],
           ),
-          backgroundColor: settingsProvider.backgroundColor,
           body: bitProvider.bits.isEmpty
               ? const Center(child: Text("No new bits yet, Get to writing!"))
               : ReorderableListView.builder(
@@ -93,7 +92,7 @@ class BitsScreen extends StatelessWidget {
                       },
                       child: Card(
                         key: ValueKey(bit.id),
-                        elevation: 2.0,
+                        elevation: 5.0,
                         child: ListTile(
                           title: Text(
                             bit.title,
@@ -122,7 +121,8 @@ class BitsScreen extends StatelessWidget {
                     }
                     bitProvider.reorderBits(oldIndex, newIndex);
                   },
-                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                  proxyDecorator:
+                      (Widget child, int index, Animation<double> animation) {
                     return Material(
                       color: Colors.transparent,
                       child: child,

@@ -17,6 +17,7 @@ class SetListsScreen extends StatelessWidget {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         return Scaffold(
+          backgroundColor: settingsProvider.backgroundColor,
           appBar: AppBar(
             backgroundColor: settingsProvider.backgroundColor,
             title: const Text('Set Lists'),
@@ -96,7 +97,7 @@ class SetListsScreen extends StatelessWidget {
                       ),
                       child: Card(
                         key: ValueKey(setList.id),
-                        elevation: 2.0,
+                        elevation: 5.0,
                         child: ListTile(
                           title: Text(
                             setList.title,

@@ -76,6 +76,7 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(labelText: 'Title'),
+                      textCapitalization: TextCapitalization.sentences,
                       validator: (value) {
                         TextCapitalization.sentences;
                         if (value == null || value.isEmpty) {
