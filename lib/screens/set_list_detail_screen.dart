@@ -395,7 +395,7 @@ class _RecordingButtonState extends State<RecordingButton> with SingleTickerProv
               child: Icon(
                 widget.isRecording ? Icons.circle : Icons.circle_outlined,
                 color: Colors.white,
-                size: 24.0,
+                size: 30.0,
               ),
             ),
           );
