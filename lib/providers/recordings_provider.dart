@@ -71,10 +71,10 @@ class RecordingsProvider with ChangeNotifier {
           toFile: filePath,
           codec: Codec.aacADTS, // Keep AAC for compatibility
           // --- Quality Adjustments ---
-          sampleRate: 44100,     // Use CD quality sample rate (adjust if needed, e.g., 48000)
-          bitRate: 192000,      // Increase bitrate to 192 kbps (common good quality)
+          sampleRate: 48000,     // Use CD quality sample rate (adjust if needed, e.g., 48000)
+          bitRate: 362000,      // Increase bitrate to 192 kbps (common good quality)
                                 // You can try 128000 (128kbps) or 256000 (256kbps)
-          numChannels: 1        // Set to 1 for mono (smaller files), use 2 for stereo if needed
+          numChannels: 2        // Set to 1 for mono (smaller files), use 2 for stereo if needed
           // -------------------------
       );
 

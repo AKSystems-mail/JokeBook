@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -65,7 +67,9 @@ class MyApp extends StatelessWidget {
               primarySwatch: Colors.blue,
               scaffoldBackgroundColor: settingsProvider.backgroundColor, // Tie scaffold background color to SettingsProvider
               appBarTheme: AppBarTheme(
-                backgroundColor: settingsProvider.backgroundColor, // Tie AppBar background color to SettingsProvider
+                backgroundColor: settingsProvider.backgroundColor,
+                elevation: 0.0, // Set elevation to 0 to remove initial shadow
+                scrolledUnderElevation: 0.0, // Tie AppBar background color to SettingsProvider
                 titleTextStyle: const TextStyle(
                   fontFamily: 'PermanentMarker',
                   fontSize: 24,
