@@ -1,3 +1,5 @@
+// lib/screens/create_set_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/models/set_list.dart';
@@ -54,9 +56,15 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
             bits: _selectedBitIds,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
+            order: newOrder,
           );
-          Provider.of<SetListProvider>(context, listen: false)
-              .addSetList(newSetList);
+          await setListProvider.addSetList(newSetList);
+
+    await Provider.of<SetListProvider>(context, listen: false).addSetList(
+      _titleController.text,
+      _selectedDate,
+      [], // New setlists start with no bits
+    );
         }
         return true; // Allow navigation
       },

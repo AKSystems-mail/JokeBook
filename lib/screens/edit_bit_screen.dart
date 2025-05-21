@@ -54,7 +54,8 @@ class _EditBitScreenState extends State<EditBitScreen> {
       body: _body,
       userId: widget.bit.userId, // Include userId
       createdAt: widget.bit.createdAt,
-      updatedAt: Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
+      updatedAt: Timestamp.fromDate(DateTime.now()),
+      order: widget.bit.order, // <<< ADDED: Keep original order // Fix Timestamp error
     );
     try {
       await Provider.of<BitProvider>(context, listen: false).updateBit(updatedBit);

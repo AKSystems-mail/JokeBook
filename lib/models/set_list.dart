@@ -1,3 +1,5 @@
+// lib/models/set_list.dart
+
 import 'package:hive/hive.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
@@ -26,6 +28,9 @@ class SetList extends HiveObject {
   @HiveField(5)
   DateTime updatedAt;
 
+  @HiveField(6) // Assign a unique HiveField typeId
+  int? order; // Make it nullable
+
   SetList({
     required this.id,
     required this.title,
@@ -33,6 +38,8 @@ class SetList extends HiveObject {
     required this.bits,
     required this.createdAt,
     required this.updatedAt,
+    
+    this.order, // Include in constructor
   });
 
   factory SetList.fromFirestore(DocumentSnapshot doc) {
@@ -45,6 +52,7 @@ class SetList extends HiveObject {
         bits: [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        order: null, // Handle nullable field
       );
     }
     
@@ -60,6 +68,7 @@ class SetList extends HiveObject {
       bits: List<String>.from(data['bits'] ?? []),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      order: data['order'] as int?, // Include in fromFirestore factory
     );
   }
 
@@ -70,6 +79,7 @@ class SetList extends HiveObject {
       'bits': bits,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'order': order, // Include in toFirestore method
     };
   }
 }

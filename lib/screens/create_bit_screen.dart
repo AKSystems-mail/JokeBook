@@ -7,6 +7,7 @@ import '../providers/bit_provider.dart';
 import '../providers/settings_provider.dart';
 import 'package:logging/logging.dart';
 
+
 class CreateBitScreen extends StatefulWidget {
   const CreateBitScreen({Key? key});
 
@@ -34,13 +35,15 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
     if (_title.isEmpty && _body.isEmpty) {
       return;
     }
+    final bitProvider = Provider.of<BitProvider>(context, listen: false);
     final bit = Bit(
       id: DateTime.now().toString(),
       title: _title,
       body: _body,
       userId: FirebaseAuth.instance.currentUser!.uid,
       createdAt: Timestamp.fromDate(DateTime.now()),
-      updatedAt: Timestamp.fromDate(DateTime.now()), // Fix Timestamp error
+      updatedAt: Timestamp.fromDate(DateTime.now()),
+      order: bitProvider.bits.length,  // Fix Timestamp error
     );
     try {
       _log.info(

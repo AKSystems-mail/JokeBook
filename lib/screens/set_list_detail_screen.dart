@@ -189,6 +189,7 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
         userId: 'unknown',
         createdAt: Timestamp.fromDate(DateTime.now()),
         updatedAt: Timestamp.fromDate(DateTime.now()),
+        order: -1, 
       ),
     );
 
@@ -258,56 +259,68 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
     );
   }
 
-  void _showReplaceBitDialog(BuildContext context, BitProvider bitProvider, int index, String bitId) {
+  void _showReplaceBitDialog(BuildContext outerContext, BitProvider bitProvider, int originalBitIndexInSetlist, String swipedBitId) {
+    // This list holds the state of selected bits for the dialog.
+    // Initialize it with the bit that was swiped.
+    List<String> selectedBitsForDialog = [swipedBitId];
+
     showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-            
-          builder: (context, setState) {
-            List<String> selectedBits = [bitId];
+      context: outerContext, // Use outerContext to avoid confusion
+      builder: (dialogContext) {
+        return StatefulBuilder( // StatefulBuilder to manage the dialog's internal UI updates
+          builder: (stfContext, stfSetState) { // stfSetState is for THIS StatefulBuilder
             return AlertDialog(
-              title: const Text('Replace Bit'),
-              content: SingleChildScrollView(
-                child:  Column(
-                  children: bitProvider.bits.map((bit) {
+              // DialogTheme from main.dart will style the AlertDialog
+              title: const Text('Select Bits'),
+              content: SizedBox( // Constrain the size of the dialog content
+                width: double.maxFinite,
+                child: ListView.builder( // Use ListView.builder for scrollable content
+                  shrinkWrap: true,
+                  itemCount: bitProvider.bits.length,
+                  itemBuilder: (context, itemIndex) {
+                    final Bit currentBitInList = bitProvider.bits[itemIndex];
                     return CheckboxListTile(
-                      title: Text(bit.title),
-                      value: selectedBits.contains(bit.id),
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            selectedBits.add(bit.id);
-                          }
-                           else {
-                            selectedBits.remove(bit.id);
+                      title: Text(currentBitInList.title), // Text color from DialogTheme or ListTileTheme
+                      value: selectedBitsForDialog.contains(currentBitInList.id),
+                      activeColor: Theme.of(outerContext).colorScheme.primary, // Explicitly theme checkbox
+                      checkColor: Theme.of(outerContext).colorScheme.onPrimary,
+                      onChanged: (bool? newValue) {
+                        stfSetState(() { // Use stfSetState to update dialog content
+                          if (newValue == true) {
+                            if (!selectedBitsForDialog.contains(currentBitInList.id)) {
+                              selectedBitsForDialog.add(currentBitInList.id);
+                            }
+                          } else {
+                            selectedBitsForDialog.remove(currentBitInList.id);
                           }
                         });
                       },
                     );
-                  }).toList(),
+                  },
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
-                  child: const Text('Cancel'),
+                  child: const Text('Cancel'), // TextButtonTheme will style this
                 ),
                 TextButton(
                   onPressed: () {
+                    // This setState is for the main _SetListDetailScreenState
                     setState(() {
-                      widget.setList.bits.removeAt(index);
-                      widget.setList.bits.insertAll(index, selectedBits);
+                      // Replace the bit at the original index with all selected bits
+                      widget.setList.bits.removeAt(originalBitIndexInSetlist);
+                      widget.setList.bits.insertAll(originalBitIndexInSetlist, selectedBitsForDialog);
                       widget.setList.updatedAt = DateTime.now();
-                      Provider.of<SetListProvider>(context, listen: false)
+                      Provider.of<SetListProvider>(outerContext, listen: false)
                           .updateSetList(widget.setList);
                     });
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop(); // Close the dialog
                   },
-                  child: const Text('OK'),
-                                  ),
+                  child: const Text('OK'), // TextButtonTheme will style this
+                ),
               ],
             );
           },

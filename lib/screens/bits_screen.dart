@@ -1,3 +1,5 @@
+// lib/screens/bits_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/providers/settings_provider.dart';
@@ -116,9 +118,6 @@ class BitsScreen extends StatelessWidget {
                     );
                   },
                   onReorder: (int oldIndex, int newIndex) {
-                    if (oldIndex < newIndex) {
-                      newIndex -= 1;
-                    }
                     bitProvider.reorderBits(oldIndex, newIndex);
                   },
                   proxyDecorator:

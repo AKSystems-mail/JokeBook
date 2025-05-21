@@ -55,6 +55,7 @@ dependencies:
   provider: ^6.1.1
   intl: ^0.20.1
 
+  uuid: ^4.4.0
 dev_dependencies:
   dwds: ^24.2.0
   hive_generator: ^2.0.1

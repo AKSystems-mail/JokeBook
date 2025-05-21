@@ -23,13 +23,14 @@ class BitAdapter extends TypeAdapter<Bit> {
       userId: fields[3] as String,
       createdAt: fields[4] as Timestamp,
       updatedAt: fields[5] as Timestamp,
+      order: fields[6] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Bit obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class BitAdapter extends TypeAdapter<Bit> {
       ..writeByte(4)
       ..write(obj.createdAt)
       ..writeByte(5)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(6)
+      ..write(obj.order);
   }
 
   @override
