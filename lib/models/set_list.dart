@@ -38,16 +38,39 @@ class SetList extends HiveObject {
     required this.bits,
     required this.createdAt,
     required this.updatedAt,
-    
     this.order, // Include in constructor
   });
 
+  // --- ADD THE COPYWITH METHOD HERE ---
+  SetList copyWith({
+    String? id,
+    String? title,
+    DateTime? date,
+    List<String>? bits,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? order,
+    bool setOrderToNull = false, // Helper to explicitly set order to null if needed
+  }) {
+    return SetList(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      date: date ?? this.date,
+      bits: bits ?? List<String>.from(this.bits), // Ensure bits are copied correctly
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      order: setOrderToNull ? null : (order ?? this.order),
+    );
+  }
+  // --- END OF COPYWITH METHOD ---
+
+
   factory SetList.fromFirestore(DocumentSnapshot doc) {
     if (doc.data() == null) {
-      _logger.info('Error: Document data is null');
+      _logger.warning('Warning: Document data is null for doc ID: ${doc.id}. Returning default SetList.');
       return SetList(
         id: doc.id,
-        title: '',
+        title: 'Error: Missing Data',
         date: DateTime.now(),
         bits: [],
         createdAt: DateTime.now(),
@@ -57,29 +80,42 @@ class SetList extends HiveObject {
     }
     
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
-    if (!data['bits'].every((element) => element is String)) {
-      _logger.info('Error: bits field contains non-string elements');
-      throw ArgumentError('bits field must contain only strings');
+
+    // Robust check for bits
+    List<String> parsedBits = [];
+    if (data['bits'] != null && data['bits'] is List) {
+      try {
+        parsedBits = List<String>.from((data['bits'] as List).map((item) => item.toString()));
+      } catch (e) {
+        _logger.warning('Warning: Error parsing bits field for doc ID: ${doc.id}. Bits: ${data['bits']}. Error: $e. Using empty list for bits.');
+        parsedBits = [];
+      }
+    } else if (data['bits'] != null) {
+        _logger.warning('Warning: bits field is not a List for doc ID: ${doc.id}. Bits: ${data['bits']}. Using empty list for bits.');
+        parsedBits = [];
     }
+
+
     return SetList(
       id: doc.id,
-      title: data['title'] ?? '',
-      date: (data['date'] as Timestamp).toDate(),
-      bits: List<String>.from(data['bits'] ?? []),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-      order: data['order'] as int?, // Include in fromFirestore factory
+      title: data['title'] as String? ?? 'Untitled',
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      bits: parsedBits,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      order: data['order'] as int?,
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
+      // 'id': id, // Usually not stored in the document data if the document ID is the setlist ID
       'title': title,
       'date': Timestamp.fromDate(date),
       'bits': bits,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'order': order, // Include in toFirestore method
+      'order': order,
     };
   }
 }

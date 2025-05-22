@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch and Timestamp
 import '/models/set_list.dart';
 import '/services/firestore_service.dart';
-import 'package:uuid/uuid.dart'; // For generating IDs if needed
+import 'package:uuid/uuid.dart'; // For generating IDs
 import 'package:logging/logging.dart';
-
 
 class SetListProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -14,7 +13,6 @@ class SetListProvider with ChangeNotifier {
   bool _isLoading = true;
   String? _error;
   static final Logger _log = Logger('SetListProvider');
-
 
   List<SetList> get setLists => _setLists;
   bool get isLoading => _isLoading;
@@ -43,68 +41,70 @@ class SetListProvider with ChangeNotifier {
     });
   }
 
-  // Simplified addSetList, assuming CreateSetListScreen prepares most of it
   Future<void> addSetList(String title, DateTime date, List<String> bitIds) async {
     final user = _firestoreService.auth.currentUser;
     if (user == null) {
       _log.warning("Cannot add setlist: User not authenticated.");
       return;
     }
+
+    // Define newOrder before using it
     final newOrder = _setLists.length; // New setlists go to the end
 
     final newSetList = SetList(
-      id: const Uuid().v4(), // Generate ID client-side for optimistic updates or use Firestore's auto-ID
+      id: const Uuid().v4(), // Generate ID client-side
       title: title,
       date: date,
       bits: bitIds,
-      createdAt: Timestamp.now(), // Client-side timestamp for optimistic
-      updatedAt: Timestamp.now(), // Client-side timestamp for optimistic
-      order: newOrder,
+      createdAt: DateTime.now(), // Use DateTime.now()
+      updatedAt: DateTime.now(), // Use DateTime.now()
+      order: newOrder, // Use the defined newOrder
     );
 
     try {
-      // Optimistic add (optional)
+      // Optimistic add (optional, if you uncomment, ensure SetList model is fully populated)
       // _setLists.add(newSetList);
       // notifyListeners();
-      
-      final generatedId = await _firestoreService.addSetList(newSetList.copyWith(id: '')); // Let Firestore generate ID if preferred
-      // If Firestore generates ID, you might need to update the local newSetList.id or re-fetch/rely on stream.
-      // For simplicity, if Uuid is used, the ID is already set.
+
+      await _firestoreService.addSetList(newSetList); // Pass the newSetList directly
       _log.info("SetList added successfully to Firestore with order ${newSetList.order}");
     } catch (e) {
       _log.severe("Failed to add setlist: $e");
       // Revert optimistic add if implemented
-      throw e;
+      rethrow; // Use rethrow
     }
   }
 
-  Future<void> updateSetList(SetList setList) async { // Used by rename, date change etc.
+
+  Future<void> updateSetList(SetList setList) async {
     final user = _firestoreService.auth.currentUser;
     if (user == null) return;
 
-    setList.updatedAt = Timestamp.now(); // Ensure updatedAt is current
+    // Ensure updatedAt is current, create a new instance if SetList is immutable or for clarity
+    final SetList updatedSetList = setList.copyWith(
+      updatedAt: DateTime.now(),
+    );
     
     // Optimistic update (optional)
-    // final index = _setLists.indexWhere((sl) => sl.id == setList.id);
-    // if (index != -1) _setLists[index] = setList;
+    // final index = _setLists.indexWhere((sl) => sl.id == updatedSetList.id);
+    // if (index != -1) _setLists[index] = updatedSetList;
     // notifyListeners();
 
     try {
-      await _firestoreService.updateSetList(setList);
+      await _firestoreService.updateSetList(updatedSetList);
     } catch (e) {
-      _log.severe("Failed to update setlist ${setList.id}: $e");
+      _log.severe("Failed to update setlist ${updatedSetList.id}: $e");
       // Revert optimistic update
-      throw e;
+      rethrow; // Use rethrow
     }
   }
-
 
   Future<void> deleteSetList(String setListId) async {
     await _firestoreService.deleteSetList(setListId);
     // Stream will update. Optimistic:
     // _setLists.removeWhere((sl) => sl.id == setListId);
     // notifyListeners();
-    // Deleting might require re-ordering subsequent items in Firestore.
+    // Deleting might require re-ordering subsequent items in Firestore. Consider this logic if needed.
   }
 
   Future<void> reorderSetLists(int oldIndex, int newIndexFromListView) async {
@@ -130,8 +130,11 @@ class SetListProvider with ChangeNotifier {
     List<SetList> setListsToUpdateInFirestore = [];
     for (int i = 0; i < _setLists.length; i++) {
       if (_setLists[i].order != i) {
-        _setLists[i].order = i;
-        _setLists[i].updatedAt = Timestamp.now(); // Update timestamp on reorder
+        // Create a new instance with updated order and timestamp
+        _setLists[i] = _setLists[i].copyWith(
+          order: i,
+          updatedAt: DateTime.now(),
+        );
         setListsToUpdateInFirestore.add(_setLists[i]);
       }
     }
@@ -149,7 +152,8 @@ class SetListProvider with ChangeNotifier {
           .doc(user.uid)
           .collection('setLists')
           .doc(slToUpdate.id);
-      batch.update(slRef, {'order': slToUpdate.order, 'updatedAt': slToUpdate.updatedAt});
+      // Ensure DateTime is converted to Timestamp for Firestore batch
+      batch.update(slRef, {'order': slToUpdate.order, 'updatedAt': Timestamp.fromDate(slToUpdate.updatedAt)});
     }
 
     try {
@@ -158,24 +162,20 @@ class SetListProvider with ChangeNotifier {
     } catch (e) {
       _log.severe("Failed to persist setlist order to Firestore: $e");
       _fetchSetLists(); // Re-fetch to ensure consistency
-      throw e;
+      rethrow; // Use rethrow
     }
   }
-
-  // --- Other methods like renameSetList, duplicateSetList, addBitToSetlist, removeBitFromSetlist ---
-  // Ensure these methods correctly update the SetList object and then call updateSetList.
 
   Future<void> renameSetList(String setListId, String newTitle) async {
     final index = _setLists.indexWhere((sl) => sl.id == setListId);
     if (index != -1) {
-      // Create a new object or ensure the existing one is prepared for update
       SetList updatedSetList = _setLists[index].copyWith(
         title: newTitle,
-        updatedAt: Timestamp.now(),
+        updatedAt: DateTime.now(),
       );
       _setLists[index] = updatedSetList; // Optimistic local update
       notifyListeners();
-      await updateSetList(updatedSetList); // Persist
+      await updateSetList(updatedSetList); // Persist (updateSetList handles its own updatedAt)
     }
   }
 
@@ -183,17 +183,13 @@ class SetListProvider with ChangeNotifier {
     final user = _firestoreService.auth.currentUser;
     if (user == null) return;
 
-    final newOrder = _setLists.length; // Duplicate goes to the end
-    final duplicatedSetList = SetList(
-      id: const Uuid().v4(), // New ID for the duplicate
-      title: newTitle,
-      date: newDate,
-      bits: List<String>.from(originalSetList.bits), // Copy the bits
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      order: newOrder,
+    // The addSetList method will handle setting createdAt, updatedAt, and order for the new duplicated list.
+    // It will also generate a new ID.
+    await addSetList(
+        newTitle, 
+        newDate, 
+        List<String>.from(originalSetList.bits) // Ensure bits are copied
     );
-    await addSetList(duplicatedSetList.title, duplicatedSetList.date, duplicatedSetList.bits); // Use the simplified addSetList
   }
   
   Future<void> addBitToSetlist(String setlistId, String bitId) async {
@@ -201,15 +197,14 @@ class SetListProvider with ChangeNotifier {
     if (setlistIndex != -1) {
       final setlist = _setLists[setlistIndex];
       if (!setlist.bits.contains(bitId)) {
-        // Create a new list for bits to ensure change detection if SetList is immutable
         final newBitIds = List<String>.from(setlist.bits)..add(bitId);
         final updatedSetlist = setlist.copyWith(
           bits: newBitIds,
-          updatedAt: Timestamp.now(),
+          updatedAt: DateTime.now(),
         );
         _setLists[setlistIndex] = updatedSetlist; // Optimistic update
         notifyListeners();
-        await updateSetList(updatedSetlist);
+        await updateSetList(updatedSetlist); // updateSetList handles its own updatedAt
       }
     }
   }
@@ -222,11 +217,11 @@ class SetListProvider with ChangeNotifier {
         final newBitIds = List<String>.from(setlist.bits)..remove(bitId);
         final updatedSetlist = setlist.copyWith(
           bits: newBitIds,
-          updatedAt: Timestamp.now(),
+          updatedAt: DateTime.now(),
         );
         _setLists[setlistIndex] = updatedSetlist; // Optimistic update
         notifyListeners();
-        await updateSetList(updatedSetlist);
+        await updateSetList(updatedSetlist); // updateSetList handles its own updatedAt
       }
     }
   }
