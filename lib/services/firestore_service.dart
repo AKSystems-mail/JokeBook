@@ -92,8 +92,8 @@ class FirestoreService {
     return _db
         .collection('users')
         .doc(userId)
-        .collection('setLists') // Lowercase 'l' - ensure consistency
-        .orderBy('order', descending: true)
+        .collection('setLists')
+        .orderBy('order', descending: false)
         .snapshots()
         .map((snapshot) {
       _log.fine('Received ${snapshot.docs.length} set lists from Firestore');

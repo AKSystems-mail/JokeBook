@@ -8,7 +8,7 @@ apply plugin: 'com.google.gms.google-services'
 
 android {
     namespace = "com.jokebook.app"
-    compileSdk = 34
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -58,10 +58,9 @@ signingConfigs {
 }
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.2.0')
-    // Add the Firebase Authentication dependency
     implementation 'com.google.firebase:firebase-auth'
-    // Optional: Add the Google Play Services Auth dependency for Google Sign-In
     implementation 'com.google.android.gms:play-services-auth:20.6.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 
