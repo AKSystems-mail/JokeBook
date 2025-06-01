@@ -112,8 +112,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         return Scaffold(
-          appBar: AppBar( // AppBar color is now handled by AppBarTheme in main.dart
-            title: const Text('Joke Book'),
+          appBar: AppBar(
+            title: Container(
+              color: settingsProvider.backgroundColor,
+              padding: const EdgeInsets.all(8.0),
+              child: const Text('Joke Book'),
+            ),
             backgroundColor: settingsProvider.backgroundColor,
           ),
           backgroundColor: settingsProvider.backgroundColor,

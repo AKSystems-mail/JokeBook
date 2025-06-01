@@ -1,5 +1,5 @@
-name: jokebook
-description: "A notebook Joke Book for comedians..."
+name: YourAppName
+description: "Your app description."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -44,19 +44,17 @@ dependencies:
   table_calendar: ^3.2.0
   wakelock_plus: ^1.2.10
   logging: ^1.2.0
-  flutter_sound: ^9.28.0
-  just_audio: ^0.9.37
+  # The following adds the Cupertino Icons font to your application.
+  audioplayers: ^6.0.0
+  just_audio: ^0.9.18
+  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  permission_handler: ^11.3.1
+  permission_handler: ^11.0.0
   record: ^5.2.0
   provider: ^6.1.1
   intl: ^0.20.1
+
   uuid: ^4.4.0
-  
-dependency_overrides:
-  permission_handler_apple: 9.2.0
-  audio_session: 0.1.18
-  
 dev_dependencies:
   dwds: ^24.2.0
   hive_generator: ^2.0.1
@@ -86,4 +84,4 @@ flutter:
   fonts:
     - family: PermanentMarker
       fonts:
-        - asset: fonts/PermanentMarker-Regular.ttf    
+        - asset: fonts/PermanentMarker-Regular.ttf

@@ -23,13 +23,14 @@ class SetListAdapter extends TypeAdapter<SetList> {
       bits: (fields[3] as List).cast<String>(),
       createdAt: fields[4] as DateTime,
       updatedAt: fields[5] as DateTime,
+      order: fields[6] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SetList obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class SetListAdapter extends TypeAdapter<SetList> {
       ..writeByte(4)
       ..write(obj.createdAt)
       ..writeByte(5)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(6)
+      ..write(obj.order);
   }
 
   @override

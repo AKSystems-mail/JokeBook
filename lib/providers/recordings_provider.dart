@@ -1,3 +1,9 @@
+// This provider has been refactored to use the 'record' package for audio recording,
+// replacing the previous 'flutter_sound' implementation. Key functionalities like
+// starting, stopping, and managing recording state have been adapted to the 'record' package's API.
+// The core audio format (AAC) and quality settings have been preserved.
+// Last refactored: 2024-10-28 for this change.
+//
 // lib/providers/recordings_provider.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,7 +11,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:record/record.dart'; // Replaced flutter_sound
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
@@ -18,7 +24,7 @@ import 'dart:io' as io; // Use alias to differentiate between dart:io and dart:h
 import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb to check platform
 
 class RecordingsProvider with ChangeNotifier {
-  final FlutterSoundRecorder _mRecorder = FlutterSoundRecorder();
+  final AudioRecorder _audioRecorder = AudioRecorder(); // Replaced FlutterSoundRecorder
   final _log = Logger('RecordingsProvider');
   bool _isRecording = false;
   String currentRecordingTitle = '';
@@ -28,7 +34,7 @@ class RecordingsProvider with ChangeNotifier {
   List<Recording> recordings = [];
   Recording? activeRecording;
   bool isDisposed = false; // Flag to indicate if the provider is disposed.
-  bool _isLoading = false; // Flag to indicate if loading is in progress.
+  final bool _isLoading = false; // Flag to indicate if loading is in progress. Made final.
 
   Duration get currentDuration => _currentDuration;
   bool get isLoading => _isLoading;
@@ -54,31 +60,29 @@ class RecordingsProvider with ChangeNotifier {
     }
 
     // Ensure previous recording is stopped if any state inconsistency occurred
-    if (_mRecorder.isRecording || _isRecording) {
+    if (await _audioRecorder.isRecording() || _isRecording) { // Updated to use _audioRecorder.isRecording()
        _log.warning("Recorder state indicates recording, attempting stop before starting new one.");
-       await _mRecorder.stopRecorder();
+       await _audioRecorder.stop(); // Updated to use _audioRecorder.stop()
        _isRecording = false;
        _stopTimer(); // Ensure timer is stopped too
     }
 
-
-    await initRecorder(); // Ensure recorder is open
+    // Removed await initRecorder(); as it's not needed for 'record' package
     String filePath = await getAudioFile(setListId); // Ensure this generates .aac path
 
     try {
       _log.info("Starting recorder with enhanced quality settings...");
-      await _mRecorder.startRecorder(
-          toFile: filePath,
-          codec: Codec.aacADTS, // Keep AAC for compatibility
-          // --- Quality Adjustments ---
-          sampleRate: 48000,     // Use CD quality sample rate (adjust if needed, e.g., 48000)
-          bitRate: 362000,      // Increase bitrate to 192 kbps (common good quality)
-                                // You can try 128000 (128kbps) or 256000 (256kbps)
-          numChannels: 2        // Set to 1 for mono (smaller files), use 2 for stereo if needed
-          // -------------------------
+      // Updated to use _audioRecorder.start() with RecordConfig
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc, // Equivalent for aacADTS
+          sampleRate: 48000,
+          bitRate: 362000,
+          numChannels: 2,
+        ),
+        path: filePath,
       );
 
-           // Specify codec
       _isRecording = true;
       activeRecording = Recording(
         id: DateTime.now().toString(),
@@ -106,23 +110,26 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   Future<void> stopRecording(BuildContext context) async {
-    if (_isRecording) {
+    if (_isRecording) { // Check internal flag first
       try {
-        await _mRecorder.stopRecorder();
+        final path = await _audioRecorder.stop(); // Updated to use _audioRecorder.stop()
         _isRecording = false;
         _stopTimer();
 
         if (activeRecording != null) {
+          // If 'record' returns a path, we can use it. Otherwise, rely on activeRecording.filePath
+          String finalPath = path ?? activeRecording!.filePath;
+          _log.info('Recording stopped, file saved at: $finalPath');
+
           // Upload the recording to Firebase Storage
-          File recordingFile = File(activeRecording!.filePath);
-          String userId = FirebaseAuth.instance.currentUser!.uid; // Correct way to get UID
+          File recordingFile = File(finalPath); // Use finalPath
+          String userId = FirebaseAuth.instance.currentUser!.uid;
           String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
           UploadTask uploadTask = FirebaseStorage.instance
               .ref()
               .child(storagePath)
               .putFile(recordingFile);
 
-          // Listen for state changes, errors, and completion of the upload.
           uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
             _log.info('Task state: ${snapshot.state}');
             _log.info('Progress: ${(snapshot.bytesTransferred / snapshot.totalBytes) * 100} %');
@@ -133,16 +140,10 @@ class RecordingsProvider with ChangeNotifier {
           TaskSnapshot taskSnapshot = await uploadTask;
           String downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
-          // Update the recording with the download URL
-          activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl);
+          activeRecording = activeRecording!.copyWith(audioUrl: downloadUrl, filePath: finalPath); // Ensure filePath is updated if different
 
-          // Save the recording details to Firestore
           await FirestoreService().addRecording(activeRecording!);
-
-          // Add the recording to the local list
           recordings.add(activeRecording!);
-
-          // Notify listeners after the upload is complete
           notifyListeners();
         }
       } catch (e) {
@@ -177,9 +178,7 @@ class RecordingsProvider with ChangeNotifier {
     return filePath;
   }
 
-  Future<void> initRecorder() async {
-    await _mRecorder.openRecorder();
-  }
+  // Removed initRecorder method as it's no longer needed.
 
   Future<void> fetchRecordings() async {
     try {
@@ -251,4 +250,25 @@ class RecordingsProvider with ChangeNotifier {
   void _stopTimer() {
     _timer?.cancel();
   }
+
+  // Dispose method to clean up resources
+  @override
+  void dispose() {
+    if (!isDisposed) {
+      _log.info("Disposing RecordingsProvider");
+      _audioRecorder.dispose();
+      _timer?.cancel();
+      isDisposed = true; // Set the flag
+      super.dispose(); // Call super.dispose() if extending ChangeNotifier or similar
+    }
+  }
+}
+
+// Define the custom exception class
+class RecordingPermissionException implements Exception {
+  final String message;
+  RecordingPermissionException(this.message);
+
+  @override
+  String toString() => 'RecordingPermissionException: $message';
 }
