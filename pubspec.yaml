@@ -44,17 +44,19 @@ dependencies:
   table_calendar: ^3.2.0
   wakelock_plus: ^1.2.10
   logging: ^1.2.0
-  # The following adds the Cupertino Icons font to your application.
-  flutter_sound: ^9.5.2
-  audioplayers: ^6.0.0
-  just_audio: ^0.9.18
-  # Use with the CupertinoIcons class for iOS style icons.
+  flutter_sound: ^9.28.0
+  just_audio: ^0.9.37
   cupertino_icons: ^1.0.8
-  permission_handler: ^11.0.0
+  permission_handler: ^11.3.1
   record: ^5.2.0
   provider: ^6.1.1
   intl: ^0.20.1
   uuid: ^4.4.0
+  
+dependency_overrides:
+  permission_handler_apple: 9.2.0
+  audio_session: 0.1.18
+  
 dev_dependencies:
   dwds: ^24.2.0
   hive_generator: ^2.0.1
