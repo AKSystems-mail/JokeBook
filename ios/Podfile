@@ -1,3 +1,6 @@
+ENV['FLUTTER_ROOT'] = '/opt/flutter' # Define FLUTTER_ROOT
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), ENV['FLUTTER_ROOT'])
+
 # Uncomment this line to define a global platform for your project
 platform :ios, '15.0'
 
