@@ -1,13 +1,7 @@
-// lib/screens/create_set_list_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // For date formatting
-
 import '/providers/set_list_provider.dart';
-import '/providers/bit_provider.dart'; // Import BitProvider
-import '/models/bit.dart';             // Import Bit model
-import '/providers/settings_provider.dart'; // Assuming you use this for AppBar color
+// Import other necessary files like your BitProvider if used for selecting bits
 
 class CreateSetListScreen extends StatefulWidget {
   const CreateSetListScreen({super.key});
@@ -20,16 +14,7 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  final List<String> _selectedBitIds = []; // Keep this
-
-  @override
-  void initState() {
-    super.initState();
-    // Optional: If your BitProvider needs an explicit fetch and doesn't load bits via stream initially
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   Provider.of<BitProvider>(context, listen: false).fetchBits(); // Or whatever your fetch method is
-    // });
-  }
+  List<String> _selectedBitIds = []; // Populate this list based on user selection
 
   @override
   void dispose() {
@@ -38,38 +23,30 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
   }
 
   Future<void> _saveSetList() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-    // Optional: Check if at least one bit is selected
-    // if (_selectedBitIds.isEmpty) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('Please select at least one bit.')),
-    //   );
-    //   return;
-    // }
-
-    try {
-      await Provider.of<SetListProvider>(context, listen: false).addSetList(
-        _titleController.text,
-        _selectedDate,
-        _selectedBitIds,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Setlist saved!')),
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await Provider.of<SetListProvider>(context, listen: false).addSetList(
+          _titleController.text,
+          _selectedDate,
+          _selectedBitIds, // Use the bits selected on this screen
         );
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save setlist: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Setlist saved!')),
+          );
+          Navigator.of(context).pop(); // Go back after saving
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save setlist: $e')),
+          );
+        }
       }
     }
   }
 
+  // Example method to pick date
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -84,32 +61,66 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
     }
   }
 
+  // Example: You would have UI elements to populate _selectedBitIds
+  // For instance, a button that opens a dialog to select bits from BitProvider.
+  // void _selectBits() async {
+  //   final List<String>? result = await showDialog<List<String>>(
+  //     context: context,
+  //     builder: (context) => BitSelectionDialog(), // Your custom dialog
+  //   );
+  //   if (result != null) {
+  //     setState(() {
+  //       _selectedBitIds = result;
+  //     });
+  //   }
+  // }
+
+
   @override
   Widget build(BuildContext context) {
-    // Access SettingsProvider for AppBar color
-    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    // final bitProvider = Provider.of<BitProvider>(context); // If needed for bit selection UI
 
     return WillPopScope(
       onWillPop: () async {
+        // This is called when the user presses the back button or an OS back gesture.
+        // You might want to prompt the user if they want to save changes or discard.
+        // For simplicity here, we'll attempt to save if valid.
+        // If there's unsaved data, you might show a confirmation dialog.
+
         if (_formKey.currentState?.validate() ?? false) {
-          // Using the same save logic as the save button for consistency on back press
+          // If the form is valid, you could auto-save, or prompt.
+          // The snippet you provided had two save attempts. We only need one correct one.
+          // Let's assume for onWillPop, if valid, we save.
+          // If you want different behavior (e.g., prompt "Save changes?"), implement that here.
+
+          // The problematic block was:
+          // final newSetList = SetList(id: ..., title: ..., order: newOrder, ...);
+          // await SetListProvider.addSetList(newSetList); // Incorrect static call & args
+          // AND
+          // await Provider.of<SetListProvider>(context, listen: false).addSetList(
+          //   _titleController.text,
+          //   _selectedDate,
+          //   [], // This used an empty list for bits
+          // );
+
+          // We will use ONE correct call.
+          // If onWillPop should save the selected bits:
           await Provider.of<SetListProvider>(context, listen: false).addSetList(
             _titleController.text,
             _selectedDate,
-            _selectedBitIds,
+            _selectedBitIds, // Use the currently selected bits
           );
-          // No need for ScaffoldMessenger here as we are popping immediately
+          // No need for another addSetList call.
         }
-        return true; // Allow pop
+        return true; // Allow the pop to happen. Return false to prevent popping.
       },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Create New Set List'),
-          backgroundColor: settingsProvider.backgroundColor, // From SettingsProvider
           actions: [
             IconButton(
               icon: const Icon(Icons.save),
-              onPressed: _saveSetList,
+              onPressed: _saveSetList, // Call the save function
             ),
           ],
         ),
@@ -117,12 +128,11 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
-            child: Column( // Changed from ListView to Column for direct control with Expanded
+            child: ListView( // Use ListView for potentially long forms
               children: <Widget>[
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(labelText: 'Set List Title'),
-                  textCapitalization: TextCapitalization.sentences,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a title';
@@ -132,69 +142,24 @@ class _CreateSetListScreenState extends State<CreateSetListScreen> {
                 ),
                 const SizedBox(height: 20),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded( // Use Expanded to ensure Text takes available space
+                    Expanded(
                       child: Text(
-                          "Date: ${DateFormat('MM/dd/yy').format(_selectedDate)}"), // Using intl for formatting
+                          "Date: ${_selectedDate.toLocal().toString().split(' ')[0]}"),
                     ),
-                    TextButton( // Changed to TextButton for better UI consistency
+                    ElevatedButton(
                       onPressed: _pickDate,
                       child: const Text("Select Date"),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text("Select Bits:",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 8),
-                // --- THIS IS THE CRUCIAL PART FOR DISPLAYING BITS ---
-                Expanded(
-                  child: Consumer<BitProvider>(
-                    builder: (context, bitProvider, child) {
-                      // Assuming BitProvider has an 'isLoading' property
-                      // if (bitProvider.isLoading) {
-                      //   return const Center(child: CircularProgressIndicator());
-                      // }
-                      if (bitProvider.bits.isEmpty) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              "No bits available. Go to the 'Bits' tab to create some first!",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        );
-                      }
-                      return ListView.builder(
-                        itemCount: bitProvider.bits.length,
-                        itemBuilder: (context, index) {
-                          final Bit bit = bitProvider.bits[index];
-                          return CheckboxListTile(
-                            title: Text(bit.title),
-                            value: _selectedBitIds.contains(bit.id),
-                            onChanged: (bool? newValue) {
-                              setState(() {
-                                if (newValue == true) {
-                                  if (!_selectedBitIds.contains(bit.id)) {
-                                    _selectedBitIds.add(bit.id);
-                                  }
-                                } else {
-                                  _selectedBitIds.remove(bit.id);
-                                }
-                              });
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                // --- END OF BIT SELECTION UI ---
+                const SizedBox(height: 20),
+                // Placeholder for Bit Selection UI
+                // You'll need to implement UI to select bits and populate _selectedBitIds
+                // For example:
+                // ElevatedButton(onPressed: _selectBits, child: Text("Select Bits")),
+                // Text("Selected Bit IDs: ${_selectedBitIds.join(', ')}"),
+                // ... your UI for selecting bits ...
               ],
             ),
           ),
