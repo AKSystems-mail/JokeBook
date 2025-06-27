@@ -49,7 +49,7 @@ class SetListProvider with ChangeNotifier {
     }
 
     // Define newOrder before using it
-    final newOrder = _setLists.length; // New setlists go to the end
+    // final newOrder = _setLists.length; // New setlists go to the end
 
     final newSetList = SetList(
       id: const Uuid().v4(), // Generate ID client-side
@@ -58,20 +58,29 @@ class SetListProvider with ChangeNotifier {
       bits: bitIds,
       createdAt: DateTime.now(), // Use DateTime.now()
       updatedAt: DateTime.now(), // Use DateTime.now()
-      order: newOrder, // Use the defined newOrder
+      order: 0, // Use the defined newOrder
     );
 
-    try {
-      // Optimistic add (optional, if you uncomment, ensure SetList model is fully populated)
-      // _setLists.add(newSetList);
-      // notifyListeners();
+    WriteBatch batch = _firestoreService.db.batch();
+    final userSetListsRef = _firestoreService.db.collection('users').doc(user.uid).collection('setLists');
 
-      await _firestoreService.addSetList(newSetList); // Pass the newSetList directly
-      _log.info("SetList added successfully to Firestore with order ${newSetList.order}");
-    } catch (e) {
-      _log.severe("Failed to add setlist: $e");
-      // Revert optimistic add if implemented
-      rethrow; // Use rethrow
+    // 1. Shift order of all existing setlists by +1
+    for (final existingSetList in _setLists) {
+      final docRef = userSetListsRef.doc(existingSetList.id);
+      batch.update(docRef, {'order': (existingSetList.order ?? 0) + 1});
+    }
+
+    // 2. Add the new setlist with order 0
+    final newDocRef = userSetListsRef.doc(newSetList.id);
+    batch.set(newDocRef, newSetList.toFirestore());
+
+    try {
+      await batch.commit();
+      _log.info("SetList added successfully with order 0. New ID: ${newSetList.id}");
+      // The stream will automatically update the UI.
+    } catch (e, s) {
+      _log.severe("Failed to add setlist with shifted order: $e", e, s);
+      throw Exception('Failed to save new setlist: $e');
     }
   }
 
@@ -85,10 +94,6 @@ class SetListProvider with ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     
-    // Optimistic update (optional)
-    // final index = _setLists.indexWhere((sl) => sl.id == updatedSetList.id);
-    // if (index != -1) _setLists[index] = updatedSetList;
-    // notifyListeners();
 
     try {
       await _firestoreService.updateSetList(updatedSetList);
@@ -100,11 +105,41 @@ class SetListProvider with ChangeNotifier {
   }
 
   Future<void> deleteSetList(String setListId) async {
-    await _firestoreService.deleteSetList(setListId);
-    // Stream will update. Optimistic:
-    // _setLists.removeWhere((sl) => sl.id == setListId);
-    // notifyListeners();
-    // Deleting might require re-ordering subsequent items in Firestore. Consider this logic if needed.
+    final user = _firestoreService.auth.currentUser;
+    if (user == null) {
+      _log.warning("Cannot delete setlist: User not authenticated.");
+      throw Exception('User not authenticated.');
+    }
+
+    final setListToRemove = _setLists.firstWhere((sl) => sl.id == setListId, orElse: () => throw Exception("Setlist not found locally for deletion"));
+    final removedOrder = setListToRemove.order;
+
+    if (removedOrder == null) {
+      _log.warning("Setlist $setListId to be deleted has null order. Deleting without reordering others.");
+      await _firestoreService.deleteSetList(setListId);
+      return;
+    }
+
+    WriteBatch batch = _firestoreService.db.batch();
+    final userSetListsRef = _firestoreService.db.collection('users').doc(user.uid).collection('setLists');
+
+    // 1. Delete the setlist
+    batch.delete(userSetListsRef.doc(setListId));
+
+    // 2. Decrement order of subsequent setlists
+    for (final sl in _setLists) {
+      if (sl.id != setListId && sl.order != null && sl.order! > removedOrder) {
+        batch.update(userSetListsRef.doc(sl.id), {'order': sl.order! - 1});
+      }
+    }
+
+    try {
+      await batch.commit();
+      _log.info("SetList $setListId deleted and subsequent orders shifted.");
+    } catch (e, s) {
+      _log.severe("Failed to delete setlist $setListId and shift orders: $e", e, s);
+      throw Exception('Failed to delete setlist: $e');
+    }
   }
 
   Future<void> reorderSetLists(int oldIndex, int newIndexFromListView) async {
@@ -130,7 +165,6 @@ class SetListProvider with ChangeNotifier {
     List<SetList> setListsToUpdateInFirestore = [];
     for (int i = 0; i < _setLists.length; i++) {
       if (_setLists[i].order != i) {
-        // Create a new instance with updated order and timestamp
         _setLists[i] = _setLists[i].copyWith(
           order: i,
           updatedAt: DateTime.now(),
@@ -138,7 +172,7 @@ class SetListProvider with ChangeNotifier {
         setListsToUpdateInFirestore.add(_setLists[i]);
       }
     }
-    notifyListeners(); // Update UI immediately
+    notifyListeners();
 
     if (setListsToUpdateInFirestore.isEmpty) {
       _log.info("No actual order change for setlists, skipping Firestore batch update.");
@@ -147,12 +181,7 @@ class SetListProvider with ChangeNotifier {
 
     WriteBatch batch = _firestoreService.db.batch();
     for (final slToUpdate in setListsToUpdateInFirestore) {
-      DocumentReference slRef = _firestoreService.db
-          .collection('users')
-          .doc(user.uid)
-          .collection('setLists')
-          .doc(slToUpdate.id);
-      // Ensure DateTime is converted to Timestamp for Firestore batch
+      DocumentReference slRef = _firestoreService.db.collection('users').doc(user.uid).collection('setLists').doc(slToUpdate.id);
       batch.update(slRef, {'order': slToUpdate.order, 'updatedAt': Timestamp.fromDate(slToUpdate.updatedAt)});
     }
 
@@ -161,8 +190,8 @@ class SetListProvider with ChangeNotifier {
       _log.info("Successfully persisted reordered setlists to Firestore.");
     } catch (e) {
       _log.severe("Failed to persist setlist order to Firestore: $e");
-      _fetchSetLists(); // Re-fetch to ensure consistency
-      rethrow; // Use rethrow
+      _fetchSetLists();
+      rethrow;
     }
   }
 

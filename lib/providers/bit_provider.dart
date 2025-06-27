@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '/models/bit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch
 import '/services/firestore_service.dart';
+import 'package:uuid/uuid.dart'; // Import the uuid package
 
 class BitProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -31,9 +32,43 @@ class BitProvider with ChangeNotifier {
   }
 
   Future<void> addBit(Bit bit) async {
-    await _firestoreService.addBit(bit);
-    // The stream listener will handle adding the bit to the _bits list
-    // notifyListeners(); // No need to notify here, stream will trigger it
+    final user = _firestoreService.auth.currentUser;
+    if (user == null) {
+      print("Cannot add bit: User not authenticated.");
+      throw Exception('User not authenticated.');
+    }
+
+    WriteBatch batch = _firestoreService.db.batch();
+    final userBitsRef = _firestoreService.db.collection('users').doc(user.uid).collection('bits');
+
+    // 1. Shift order of all existing bits by +1
+    for (final existingBit in _bits) {
+      final docRef = userBitsRef.doc(existingBit.id);
+      batch.update(docRef, {'order': existingBit.order + 1});
+    }
+
+    // 2. Add the new bit with order 0
+    // We use the data from the passed-in bit, but enforce order = 0.
+    final newBit = Bit(
+      id: bit.id.isNotEmpty ? bit.id : const Uuid().v4(), // Use passed ID or generate new one
+      title: bit.title,
+      body: bit.body,
+      userId: user.uid, // Ensure correct user ID
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      order: 0, // New items always get order 0
+    );
+    final newDocRef = userBitsRef.doc(newBit.id);
+    batch.set(newDocRef, newBit.toFirestore());
+
+    try {
+      await batch.commit();
+      print("Bit added successfully with order 0. New ID: ${newBit.id}");
+      // The stream will automatically update the UI.
+    } catch (e) {
+      print("Failed to add bit with shifted order: $e");
+      throw Exception('Failed to save new bit: $e');
+    }
   }
 
   Future<void> updateBit(Bit bit) async {
@@ -47,10 +82,35 @@ class BitProvider with ChangeNotifier {
   }
 
   Future<void> deleteBit(String bitId) async {
-    await _firestoreService.deleteBit(bitId);
-    // The stream listener will handle removing the bit from the _bits list
-    // _bits.removeWhere((bit) => bit.id == bitId);
-    // notifyListeners(); // No need to notify here, stream will trigger it
+    final user = _firestoreService.auth.currentUser;
+    if (user == null) {
+      print("Cannot delete bit: User not authenticated.");
+      throw Exception('User not authenticated.');
+    }
+
+    final bitToRemove = _bits.firstWhere((b) => b.id == bitId, orElse: () => throw Exception("Bit not found locally for deletion"));
+    final removedOrder = bitToRemove.order;
+
+    WriteBatch batch = _firestoreService.db.batch();
+    final userBitsRef = _firestoreService.db.collection('users').doc(user.uid).collection('bits');
+
+    // 1. Delete the bit
+    batch.delete(userBitsRef.doc(bitId));
+
+    // 2. Decrement order of subsequent bits
+    for (final bit in _bits) {
+      if (bit.id != bitId && bit.order > removedOrder) {
+        batch.update(userBitsRef.doc(bit.id), {'order': bit.order - 1});
+      }
+    }
+
+    try {
+      await batch.commit();
+      print("Bit $bitId deleted and subsequent orders shifted.");
+    } catch (e) {
+      print("Failed to delete bit $bitId and shift orders: $e");
+      throw Exception('Failed to delete bit: $e');
+    }
   }
 
   // This is the critical method for reordering
