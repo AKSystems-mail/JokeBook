@@ -5,7 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:record/record.dart'; // <<< Use 'record' package
+import 'package:record/record.dart'; // Using 'record' package
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +17,6 @@ import 'dart:io' as io;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class RecordingsProvider with ChangeNotifier {
-  // --- MODIFIED: Use AudioRecorder from 'record' package ---
   final AudioRecorder _audioRecorder = AudioRecorder();
   final _log = Logger('RecordingsProvider');
   bool _isRecording = false;
@@ -41,6 +40,7 @@ class RecordingsProvider with ChangeNotifier {
     return '$minutes:$seconds';
   }
 
+  // --- MODIFIED startRecording ---
   Future<void> startRecording(String recordingTitle, String? setListId) async {
     if (isDisposed) {
       _log.warning("Attempted to start recording on disposed provider.");
@@ -79,7 +79,11 @@ class RecordingsProvider with ChangeNotifier {
       );
       _log.info("--- 6. _audioRecorder.start call finished. ---");
 
+      // Update state AFTER start is confirmed
       _isRecording = true;
+      startTime = DateTime.now();
+      _currentDuration = Duration.zero; // Reset UI timer
+      _startTimer();
       activeRecording = Recording(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: recordingTitle,
@@ -89,8 +93,6 @@ class RecordingsProvider with ChangeNotifier {
         createdAt: Timestamp.now(),
         duration: Duration.zero,
       );
-      startTime = DateTime.now();
-      _startTimer();
       notifyListeners();
       _log.info("--- 7. State updated, recording is now active. ---");
 
@@ -104,19 +106,42 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-  // --- MODIFIED: Use _audioRecorder.stop() ---
+  // --- MODIFIED stopRecording ---
   Future<void> stopRecording(BuildContext context) async {
-    if (_isRecording) {
+    // Check internal flag and if a recording was actually started
+    if (_isRecording && startTime != null) {
+      // Calculate the actual time elapsed since recording started
+      final elapsed = DateTime.now().difference(startTime!);
+
+      // Prevent stopping if recording is too short (e.g., less than 1 second)
+      if (elapsed.inMilliseconds < 1000) {
+        _log.warning("Recording too short (< 1s). Ignoring stop command.");
+        // Optionally provide feedback to the user via a SnackBar or other means
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Recording too short")));
+        return;
+      }
+
       try {
         final path = await _audioRecorder.stop();
-        _isRecording = false;
-        _stopTimer();
+        _stopTimer(); // Stop the UI timer
 
-        if (activeRecording != null) {
-          String finalPath = path ?? activeRecording!.filePath;
-          _log.info('Recording stopped, file saved at: $finalPath');
+        // Use the accurately calculated elapsed time as the final duration
+        final finalDuration = elapsed;
+        _isRecording = false; // Set state after all async operations are complete
 
-          File recordingFile = File(finalPath);
+        if (activeRecording != null && path != null) {
+          _log.info('Recording stopped, file saved at: $path');
+
+          File recordingFile = File(path);
+          // Check if the created file has content before uploading
+          if (await recordingFile.length() == 0) {
+            _log.severe("Recording file is empty. Aborting upload.");
+            activeRecording = null; // Clear the active recording
+            notifyListeners();
+            return;
+          }
+
+          // Proceed with upload logic
           String userId = FirebaseAuth.instance.currentUser!.uid;
           String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
           UploadTask uploadTask = FirebaseStorage.instance
@@ -134,18 +159,31 @@ class RecordingsProvider with ChangeNotifier {
           TaskSnapshot taskSnapshot = await uploadTask;
           String downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
+          // Update the active recording with the final, accurate data
           activeRecording = activeRecording!.copyWith(
             audioUrl: downloadUrl,
-            filePath: finalPath,
-            duration: _currentDuration, // Save the final duration
+            filePath: path,
+            duration: finalDuration, // <<< USE ACCURATE DURATION
           );
 
           await FirestoreService().addRecording(activeRecording!);
           recordings.add(activeRecording!);
+          
+          // Final state update to refresh UI
+          notifyListeners();
+        } else {
+          // If stop fails or something is null, reset state
+          _log.warning("Stop recording called, but activeRecording or path was null.");
+          activeRecording = null;
           notifyListeners();
         }
       } catch (e) {
         _log.warning("Error stopping and saving recording: $e");
+        // Reset state on error
+        _isRecording = false;
+        activeRecording = null;
+        _stopTimer();
+        notifyListeners();
       }
     }
   }
@@ -176,12 +214,9 @@ class RecordingsProvider with ChangeNotifier {
     return filePath;
   }
 
-  // --- REMOVED initRecorder() as it's not needed for 'record' package ---
-
   Future<void> fetchRecordings() async {
     try {
       List<Recording> recordingsList = await FirestoreService().getRecordings();
-      // Duration fetching logic can be improved, but let's keep it for now
       for (var i = 0; i < recordingsList.length; i++) {
         final duration = await _getRecordingDuration(recordingsList[i]);
         recordingsList[i] = recordingsList[i].copyWith(duration: duration);
@@ -194,6 +229,12 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   Future<Duration> _getRecordingDuration(Recording recording) async {
+    // If duration is already valid from Firestore, use it.
+    if (recording.duration.inSeconds > 0) {
+      return recording.duration;
+    }
+    
+    // Fallback to fetching it if duration is zero (for older recordings)
     final player = AudioPlayer();
     final completer = Completer<Duration>();
 
@@ -207,14 +248,12 @@ class RecordingsProvider with ChangeNotifier {
       if (kIsWeb) {
         await player.setUrl(recording.audioUrl);
       } else {
-        // Check for local file first, fallback to URL
         final file = io.File(recording.filePath);
-        if (await file.exists()) {
+        if (await file.exists() && await file.length() > 0) {
           await player.setFilePath(recording.filePath);
         } else if (recording.audioUrl.isNotEmpty) {
           await player.setUrl(recording.audioUrl);
         } else {
-          // No valid source found
           if (!completer.isCompleted) completer.complete(Duration.zero);
         }
       }
@@ -223,7 +262,6 @@ class RecordingsProvider with ChangeNotifier {
       if (!completer.isCompleted) completer.complete(Duration.zero);
     }
 
-    // Add a timeout to prevent hanging forever
     return completer.future.timeout(const Duration(seconds: 10), onTimeout: () {
       _log.warning("Timeout getting duration for recording ${recording.id}");
       return Duration.zero;
@@ -251,7 +289,7 @@ class RecordingsProvider with ChangeNotifier {
   bool isRecording() => _isRecording;
 
   void _startTimer() {
-    _timer?.cancel(); // Cancel any existing timer
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (startTime != null) {
         _currentDuration = DateTime.now().difference(startTime!);
