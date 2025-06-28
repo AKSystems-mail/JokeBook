@@ -83,9 +83,9 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final setListProvider = Provider.of<SetListProvider>(context);
-    final bitProvider = Provider.of<BitProvider>(context);
-    final recordingsProvider = Provider.of<RecordingsProvider>(context);
+    final setListProvider = context.watch<SetListProvider>();
+    final bitProvider = context.watch<BitProvider>();
+    final recordingsProvider = context.watch<RecordingsProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -107,10 +107,13 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
             child: RecordingButton(
               isRecording: recordingsProvider.isRecording(),
               onPressed: () {HapticFeedback.heavyImpact();
-                if (recordingsProvider.isRecording()) {
-                  recordingsProvider.stopRecording(context);
+                final recorder = context.read<RecordingsProvider>();
+                if (recorder.isRecording()) {
+                  // Call stopRecording on the fresh instance
+                  recorder.stopRecording(context);
                 } else {
-                  recordingsProvider.startRecording(widget.setList.title, widget.setList.id);
+                  // Call startRecording on the fresh instance
+                  recorder.startRecording(widget.setList.title, widget.setList.id);
                 }
               },
             ),
