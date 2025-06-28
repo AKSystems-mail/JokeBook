@@ -106,42 +106,42 @@ class RecordingsProvider with ChangeNotifier {
     }
   }
 
-  // --- MODIFIED stopRecording ---
+  // --- REVISED stopRecording with DETAILED LOGGING ---
   Future<void> stopRecording(BuildContext context) async {
-    // Check internal flag and if a recording was actually started
+    _log.info("--- A. stopRecording called. ---");
+
     if (_isRecording && startTime != null) {
-      // Calculate the actual time elapsed since recording started
+      _log.info("--- B. _isRecording is true. Proceeding. ---");
       final elapsed = DateTime.now().difference(startTime!);
 
-      // Prevent stopping if recording is too short (e.g., less than 1 second)
       if (elapsed.inMilliseconds < 1000) {
-        _log.warning("Recording too short (< 1s). Ignoring stop command.");
-        // Optionally provide feedback to the user via a SnackBar or other means
-        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Recording too short")));
+        _log.warning("--- C. EXIT: Recording too short (< 1s). Aborting. ---");
         return;
       }
 
       try {
+        _log.info("--- D. Calling _audioRecorder.stop()... ---");
         final path = await _audioRecorder.stop();
-        _stopTimer(); // Stop the UI timer
-
-        // Use the accurately calculated elapsed time as the final duration
-        final finalDuration = elapsed;
+        _log.info("--- E. _audioRecorder.stop() returned path: $path ---");
+        
+        _stopTimer();
         _isRecording = false; // Set state after all async operations are complete
 
         if (activeRecording != null && path != null) {
-          _log.info('Recording stopped, file saved at: $path');
-
+          _log.info("--- F. activeRecording and path are valid. Checking file... ---");
+          
           File recordingFile = File(path);
-          // Check if the created file has content before uploading
-          if (await recordingFile.length() == 0) {
-            _log.severe("Recording file is empty. Aborting upload.");
-            activeRecording = null; // Clear the active recording
+          final fileLength = await recordingFile.length();
+          _log.info("--- G. Recorded file length: $fileLength bytes. ---");
+
+          if (fileLength < 1024) { // Check for a reasonably small size, not just 0
+            _log.severe("--- H. EXIT: Recording file is empty or too small. Aborting upload. ---");
+            activeRecording = null;
             notifyListeners();
             return;
           }
 
-          // Proceed with upload logic
+          _log.info("--- I. Starting Firebase upload... ---");
           String userId = FirebaseAuth.instance.currentUser!.uid;
           String storagePath = 'users/$userId/recordings/${activeRecording!.id}.aac';
           UploadTask uploadTask = FirebaseStorage.instance
@@ -149,42 +149,36 @@ class RecordingsProvider with ChangeNotifier {
               .child(storagePath)
               .putFile(recordingFile);
 
-          uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-            _log.info('Task state: ${snapshot.state}');
-            _log.info('Progress: ${(snapshot.bytesTransferred / snapshot.totalBytes) * 100} %');
-          }, onError: (e) {
-            _log.severe('Error during upload: $e');
-          });
-
           TaskSnapshot taskSnapshot = await uploadTask;
           String downloadUrl = await taskSnapshot.ref.getDownloadURL();
+          _log.info("--- J. Upload complete. Saving to Firestore. ---");
 
-          // Update the active recording with the final, accurate data
           activeRecording = activeRecording!.copyWith(
             audioUrl: downloadUrl,
             filePath: path,
-            duration: finalDuration, // <<< USE ACCURATE DURATION
+            duration: elapsed, // Use accurate duration
           );
 
           await FirestoreService().addRecording(activeRecording!);
           recordings.add(activeRecording!);
           
-          // Final state update to refresh UI
+          _log.info("--- K. SUCCESS: Recording saved. Notifying listeners. ---");
           notifyListeners();
+
         } else {
-          // If stop fails or something is null, reset state
-          _log.warning("Stop recording called, but activeRecording or path was null.");
+          _log.severe("--- L. EXIT: Stop condition failed: activeRecording is null or path from stop() was null. ---");
           activeRecording = null;
           notifyListeners();
         }
       } catch (e) {
-        _log.warning("Error stopping and saving recording: $e");
-        // Reset state on error
+        _log.severe("--- X. EXIT: CATCH BLOCK ERROR in stopRecording: $e ---");
         _isRecording = false;
         activeRecording = null;
         _stopTimer();
         notifyListeners();
       }
+    } else {
+      _log.warning("--- M. EXIT: stopRecording called, but _isRecording was false or startTime was null. ---");
     }
   }
 
