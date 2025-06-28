@@ -72,7 +72,7 @@ class RecordingsProvider with ChangeNotifier {
         const RecordConfig(
           encoder: AudioEncoder.aacLc,
           sampleRate: 48000,
-          bitRate: 362000,
+          bitRate: 384000,
           numChannels: 2,
         ),
         path: filePath,
