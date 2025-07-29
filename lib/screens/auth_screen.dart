@@ -1,3 +1,5 @@
+// lib/screens/auth_screen.dart
+
 import 'package:logging/logging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,9 +7,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '/providers/settings_provider.dart';
-final _log = Logger('AuthScreen'); // Create a logger instance
 
-class AuthScreen extends StatefulWidget{
+final _log = Logger('AuthScreen');
+
+class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
   @override
@@ -20,7 +23,6 @@ class AuthScreenState extends State<AuthScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  String loginMessage = ""; // Initialize _loginMessage
 
   @override
   void initState() {
@@ -29,70 +31,97 @@ class AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _checkCurrentUser() async {
-    setState(() {
-      _isLoading = true; // Set loading to true while checking
-    });
-
+    // This function remains the same
+    setState(() { _isLoading = true; });
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        // No need to fetch bits here anymore, bits_screen will handle it
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
+        if (mounted) Navigator.pushReplacementNamed(context, '/home');
       } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        if (mounted) setState(() { _isLoading = false; });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() { _isLoading = false; });
       _log.info("Error checking user: $e");
     }
   }
 
-  Future<void> _signInWithEmailPassword() async {
-    setState(() {
-      _isLoading = true;
-    });
+
+  Future<void> _signInOrSignUpWithEmailPassword() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password.')),
+      );
+      return;
+    }
+
+    setState(() { _isLoading = true; });
+
+    // --- FIX: Define email and password outside the try block ---
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    // ---------------------------------------------------------
+
     try {
-      final email = _emailController.text;
-      final password = _passwordController.text;
+      // Step 1: Try to sign in
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      // Removed fetchBits() from here
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+      // If sign-in is successful, navigate to home
+      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+
+    } on FirebaseAuthException catch (e) {
+      // Step 2: If sign-in fails, check the error code
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        // User does not exist, so try to create a new account
+        try {
+          // --- FIX: Use the already defined email and password variables ---
+          final userCredential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+          if (userCredential.user != null) {
+            await _createUserDocumentIfNotExist(userCredential.user!);
+          }
+          // If account creation is successful, navigate to home
+          if (mounted) Navigator.pushReplacementNamed(context, '/home');
+        } on FirebaseAuthException catch (createError) {
+          // Handle errors during account creation (e.g., weak-password)
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error creating account: ${createError.message}')),
+            );
+          }
+        }
+      } else {
+        // Handle other sign-in errors (e.g., wrong-password)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error logging in: ${e.message}')),
+          );
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Handle any other unexpected errors
       if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error logging in: $e')),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An unexpected error occurred: ${e.toString()}')),
         );
+      }
+    } finally {
+      // Ensure loading indicator is always turned off
+      if (mounted) {
+        setState(() { _isLoading = false; });
       }
     }
   }
 
+
+  // --- This is your personal version with Google Sign-In ---
   Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() { _isLoading = true; });
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser!.authentication;
+      if (googleUser == null) { // User cancelled the sign-in
+        setState(() => _isLoading = false);
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -102,63 +131,21 @@ class AuthScreenState extends State<AuthScreen> {
       final user = userCredential.user;
 
       if (user != null) {
-        // Create user in Firestore if they don't exist
         await _createUserDocumentIfNotExist(user);
       }
 
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      if (mounted) Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error logging in with Google: $e')),
+          SnackBar(content: Text('Error logging in with Google: ${e.toString()}')),
         );
       }
+    } finally {
+      if (mounted) setState(() { _isLoading = false; });
     }
   }
 
-  Future<void> _createAccountWithEmailPassword() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final email = _emailController.text;
-      final password = _passwordController.text;
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
-      final user = userCredential.user;
-
-      if (user != null) {
-        // Create user in Firestore if they don't exist (same logic as Google)
-        await _createUserDocumentIfNotExist(user);
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating account: $e')),
-        );
-      }
-    }
-  }
 
   Future<void> _createUserDocumentIfNotExist(User user) async {
     final userDoc = await _db.collection('users').doc(user.uid).get();
@@ -166,50 +153,11 @@ class AuthScreenState extends State<AuthScreen> {
       await _db.collection('users').doc(user.uid).set({
         'createdAt': FieldValue.serverTimestamp(),
         'email': user.email,
-        'displayName': user.displayName, // Add other initial data as needed
+        'displayName': user.displayName,
       });
     }
   }
 
-  void _showCreateAccountDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Create Account'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _createAccountWithEmailPassword();
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +178,7 @@ class AuthScreenState extends State<AuthScreen> {
                       TextField(
                         controller: _emailController,
                         decoration: const InputDecoration(labelText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
                       ),
                       TextField(
                         controller: _passwordController,
@@ -238,21 +187,17 @@ class AuthScreenState extends State<AuthScreen> {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: _signInWithEmailPassword,
-                        child: const Text('Sign in with Email/Password'),
+                        // --- Use the new combined method ---
+                        onPressed: _signInOrSignUpWithEmailPassword,
+                        child: const Text('Sign In / Sign Up'),
                       ),
                       const SizedBox(height: 10),
+                      // --- This is the Google Sign-In button for your personal version ---
                       ElevatedButton(
                         onPressed: _signInWithGoogle,
                         child: const Text('Sign in with Google'),
                       ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _showCreateAccountDialog,
-                        child: const Text('Create Account'),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(loginMessage), // Display _loginMessage
+                      // --- The "Create Account" button is removed ---
                     ],
                   ),
           ),

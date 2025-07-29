@@ -10,40 +10,53 @@ import 'models/bit.dart';
 import 'models/set_list.dart';
 import 'providers/bit_provider.dart';
 import 'providers/set_list_provider.dart';
-import 'providers/settings_provider.dart'; // Import the SettingsProvider
-import 'providers/recordings_provider.dart'; // Import the RecordingsProvider
+import 'providers/settings_provider.dart';
+import 'providers/recordings_provider.dart';
 import 'firebase_options.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/recordings_screen.dart'; // Import the RecordingsScreen
+import 'screens/recordings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await Firebase.initializeApp(
-    // Initialize Firebase before Hive
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await Hive.initFlutter(); // Initialize Hive after Firebase
-  Hive.registerAdapter(BitAdapter()); // Register the BitAdapter
-  Hive.registerAdapter(SetListAdapter());
-  runApp(const MyApp());
 
-  // Listen for authentication state changes
-  FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    if (user != null) {}
-  }).onError((error, stackTrace) {});
+  await Hive.initFlutter();
+  Hive.registerAdapter(BitAdapter());
+  Hive.registerAdapter(SetListAdapter());
+
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State createState() => _MyAppState();
+}
+
+class _MyAppState extends State {
+  @override
+  void initState() {
+    super.initState();
+
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null) {
+        debugPrint("User is signed in: ${user.uid}");
+        // You can trigger navigation or state updates here if needed
+      } else {
+        debugPrint("User is signed out.");
+      }
+    }, onError: (error) {
+      debugPrint("Auth state listener error: $error");
+    });
+  }
+
   Future<bool> _checkAuthenticationStatus() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      return true;
-    }
-    return false;
+    // Return true if a user is currently signed in, false otherwise
+    return FirebaseAuth.instance.currentUser != null;
   }
 
   @override
@@ -61,6 +74,7 @@ class MyApp extends StatelessWidget {
         builder: (context, settingsProvider, child) {
           return MaterialApp(
             title: 'Joke Book',
+            debugShowCheckedModeBanner: false,
             theme: ThemeData(
               colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
                   .copyWith(secondary: const Color(0xFFADD8E6)),
