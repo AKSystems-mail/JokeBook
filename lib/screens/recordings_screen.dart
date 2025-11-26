@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '../providers/recordings_provider.dart';
 import '../providers/settings_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import '../models/recording.dart';
 import 'package:intl/intl.dart';
-import 'dart:io' as io; // Use alias to differentiate between dart:io and dart:html
-import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb to check platform
+import 'dart:io'
+    as io; // Use alias to differentiate between dart:io and dart:html
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Import kIsWeb to check platform
 
 class RecordingsScreen extends StatefulWidget {
   const RecordingsScreen({super.key});
@@ -16,11 +19,13 @@ class RecordingsScreen extends StatefulWidget {
 }
 
 class RecordingsScreenState extends State<RecordingsScreen>
-    with SingleTickerProviderStateMixin {  final AudioPlayer _audioPlayer = AudioPlayer();
+    with SingleTickerProviderStateMixin {
+  final AudioPlayer _audioPlayer = AudioPlayer();
   Recording? _selectedRecording;
   late AnimationController _animationController;
   Duration _elapsedTime = Duration.zero;
   bool _isSpeedActive = false;
+  final GlobalKey _playbackSpeedKey = GlobalKey();
 
   @override
   void initState() {
@@ -41,7 +46,9 @@ class RecordingsScreenState extends State<RecordingsScreen>
 
     _audioPlayer.playerStateStream.listen((PlayerState state) {
       if (mounted) {
-        if (!state.playing && state.processingState == ProcessingState.completed || state.processingState == ProcessingState.idle) {
+        if (!state.playing &&
+                state.processingState == ProcessingState.completed ||
+            state.processingState == ProcessingState.idle) {
           _resetPlaybackSpeed(); // Ensure speed resets when playback ends
           _animationController.reverse();
           // Optionally reset selection when playback completes naturally
@@ -68,6 +75,16 @@ class RecordingsScreenState extends State<RecordingsScreen>
         });
       }
     });
+
+    // Trigger showcase for playback speed tooltip
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      // Only show if user has seen home showcase but not recordings showcase
+      if (settings.hasSeenHomeShowcase && !settings.hasSeenRecordingsShowcase) {
+        ShowCaseWidget.of(context).startShowCase([_playbackSpeedKey]);
+        settings.completeRecordingsShowcase();
+      }
+    });
   }
 
   Future<void> _resetPlaybackSpeed() async {
@@ -83,7 +100,7 @@ class RecordingsScreenState extends State<RecordingsScreen>
     // Ensure flag is reset regardless of whether setSpeed was called
     if (_isSpeedActive && mounted) {
       setState(() {
-         _isSpeedActive = false;
+        _isSpeedActive = false;
       });
     }
   }
@@ -137,28 +154,29 @@ class RecordingsScreenState extends State<RecordingsScreen>
       // Check if mounted before showing SnackBar
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Error playing recording: ${e.toString()}')), // Use e.toString()
+        SnackBar(
+            content: Text(
+                'Error playing recording: ${e.toString()}')), // Use e.toString()
       );
     }
   }
-  
+
   Future<void> _stopPlayback() async {
     try {
-       await _audioPlayer.stop();
-       await _resetPlaybackSpeed();
-       if (mounted) {
-         setState(() {
-           _elapsedTime = Duration.zero;
-           // Optionally clear selection on stop
-           // _selectedRecording = null;
-         });
-       }
+      await _audioPlayer.stop();
+      await _resetPlaybackSpeed();
+      if (mounted) {
+        setState(() {
+          _elapsedTime = Duration.zero;
+          // Optionally clear selection on stop
+          // _selectedRecording = null;
+        });
+      }
     } catch (e) {
-        // Handle error silently or log
+      // Handle error silently or log
     }
   }
 
-  
   Future<void> playRecording(Recording recording) async {
     try {
       if (_audioPlayer.playing) {
@@ -182,32 +200,35 @@ class RecordingsScreenState extends State<RecordingsScreen>
     }
   }
 
-  Future<bool> _showDeleteConfirmationDialog(BuildContext context, String title) async {
+  Future<bool> _showDeleteConfirmationDialog(
+      BuildContext context, String title) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete Recording'),
-          content: Text('Are you sure you want to delete "$title"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Delete Recording'),
+              content: Text('Are you sure you want to delete "$title"?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   @override
   Widget build(BuildContext context) {
     // CORRECTED: Define reader here for use in callbacks
-    final recordingsProviderReader = Provider.of<RecordingsProvider>(context, listen: false);
+    final recordingsProviderReader =
+        Provider.of<RecordingsProvider>(context, listen: false);
     // Use watch here to rebuild when recordings list changes
     final recordingsProvider = Provider.of<RecordingsProvider>(context);
 
@@ -254,92 +275,115 @@ class RecordingsScreenState extends State<RecordingsScreen>
           ),
           body: recordingsProvider.isLoading
               ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: recordingsProvider.recordings.length,
-                  itemBuilder: (context, index) {
-                    final recording = recordingsProvider.recordings[index];
-                    final formattedDate = DateFormat('MM/dd/yyyy hh:mm a').format(recording.createdAt.toDate());
-                    final formattedDuration = _formatDuration(recording.duration);
-                    // CORRECTED: Renamed variable for clarity and used it
-                    final bool isCurrentlySelected = _selectedRecording?.id == recording.id;
+              : Showcase(
+                  key: _playbackSpeedKey,
+                  title: '1.5x Playback Speed',
+                  description:
+                      'Long press on a playing recording to speed up playback to 1.5x. Release to return to normal speed.',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: ListView.builder(
+                    itemCount: recordingsProvider.recordings.length,
+                    itemBuilder: (context, index) {
+                      final recording = recordingsProvider.recordings[index];
+                      final formattedDate = DateFormat('MM/dd/yyyy hh:mm a')
+                          .format(recording.createdAt.toDate());
+                      final formattedDuration =
+                          _formatDuration(recording.duration);
+                      // CORRECTED: Renamed variable for clarity and used it
+                      final bool isCurrentlySelected =
+                          _selectedRecording?.id == recording.id;
 
-                    return Dismissible(
-                      key: ValueKey(recording.id),
-                      direction: DismissDirection.endToStart,
-                      confirmDismiss: (direction) async {
-                        // Store context before await
-                        final currentContext = context;
-                        return await _showDeleteConfirmationDialog(currentContext, recording.title);
-                      },
-                      onDismissed: (direction) async {
-                        // Store context and scaffoldMessenger before await
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        // final currentContext = context; // Not needed after await here
-
-                        if (isCurrentlySelected) {
-                          await _stopPlayback();
-                          if (!mounted) return;
-                          setState(() {
-                            _selectedRecording = null;
-                          });
-                        }
-                        //Use reader for provider action
-                        await recordingsProviderReader.deleteRecording(recording);
-                        if (!mounted) return;
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(content: Text('${recording.title} deleted')),
-                        );
-                      },
-                      background: Container( // This is the background revealed during swipe
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      // CORRECTED: GestureDetector wraps ListTile and is the CHILD of Dismissible
-                      child: GestureDetector(
-                        onTap: () async {
-                          await _togglePlayPause(recording);
-                          // Use reader for provider action
-                          recordingsProviderReader.setActiveRecording(recording);
+                      return Dismissible(
+                        key: ValueKey(recording.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (direction) async {
+                          // Store context before await
+                          final currentContext = context;
+                          return await _showDeleteConfirmationDialog(
+                              currentContext, recording.title);
                         },
-                        onLongPressStart: (_) async {
-                          // CORRECTED: Use isCurrentlySelected
-                          if (isCurrentlySelected && _audioPlayer.playing) {
-                            try {
-                              await _audioPlayer.setSpeed(1.5);
-                              if (mounted) {
-                                setState(() {
-                                  _isSpeedActive = true;
-                                });
-                              }
-                            } catch (e) {
-                              /* Handle error */
-                            }
+                        onDismissed: (direction) async {
+                          // Store context and scaffoldMessenger before await
+                          final scaffoldMessenger =
+                              ScaffoldMessenger.of(context);
+                          // final currentContext = context; // Not needed after await here
+
+                          if (isCurrentlySelected) {
+                            await _stopPlayback();
+                            if (!mounted) return;
+                            setState(() {
+                              _selectedRecording = null;
+                            });
                           }
+                          //Use reader for provider action
+                          await recordingsProviderReader
+                              .deleteRecording(recording);
+                          if (!mounted) return;
+                          scaffoldMessenger.showSnackBar(
+                            SnackBar(
+                                content: Text('${recording.title} deleted')),
+                          );
                         },
-                        onLongPressEnd: (_) async {
-                           // CORRECTED: Use isCurrentlySelected
-                           if (isCurrentlySelected && _isSpeedActive) {
-                              await _resetPlaybackSpeed();
-                           }
-                        },
-                        child: ListTile(
-                          // CORRECTED: Use isCurrentlySelected
-                          tileColor: isCurrentlySelected ? Colors.blue.shade100 : null,
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(recording.title),
-                              Text(formattedDuration, style: const TextStyle(fontSize: 18, color: Color.fromARGB(255, 64, 80, 226))),
-                            ],
-                          ),
-                          subtitle: Text(formattedDate),
-                          // onTap is handled by GestureDetector
+                        background: Container(
+                          // This is the background revealed during swipe
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                      ), // End GestureDetector
-                    ); // End Dismissible
-                  },
+                        // CORRECTED: GestureDetector wraps ListTile and is the CHILD of Dismissible
+                        child: GestureDetector(
+                          onTap: () async {
+                            await _togglePlayPause(recording);
+                            // Use reader for provider action
+                            recordingsProviderReader
+                                .setActiveRecording(recording);
+                          },
+                          onLongPressStart: (_) async {
+                            // CORRECTED: Use isCurrentlySelected
+                            if (isCurrentlySelected && _audioPlayer.playing) {
+                              try {
+                                await _audioPlayer.setSpeed(1.5);
+                                if (mounted) {
+                                  setState(() {
+                                    _isSpeedActive = true;
+                                  });
+                                }
+                              } catch (e) {
+                                /* Handle error */
+                              }
+                            }
+                          },
+                          onLongPressEnd: (_) async {
+                            // CORRECTED: Use isCurrentlySelected
+                            if (isCurrentlySelected && _isSpeedActive) {
+                              await _resetPlaybackSpeed();
+                            }
+                          },
+                          child: ListTile(
+                            // CORRECTED: Use isCurrentlySelected
+                            tileColor: isCurrentlySelected
+                                ? Colors.blue.shade100
+                                : null,
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(recording.title),
+                                Text(formattedDuration,
+                                    style: const TextStyle(
+                                        fontSize: 18,
+                                        color:
+                                            Color.fromARGB(255, 64, 80, 226))),
+                              ],
+                            ),
+                            subtitle: Text(formattedDate),
+                            // onTap is handled by GestureDetector
+                          ),
+                        ), // End GestureDetector
+                      ); // End Dismissible
+                    },
+                  ),
                 ),
         );
       },

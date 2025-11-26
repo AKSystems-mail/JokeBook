@@ -9,7 +9,7 @@ apply plugin: 'com.google.gms.google-services'
 android {
     namespace = "com.jokebook.app"
     compileSdk = 35
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "28.0.12433566"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -24,8 +24,11 @@ android {
         applicationId "com.jokebook.app"
         minSdk 24
         targetSdk 35
-        versionCode 5  // You can set a version code here if needed
-        versionName "2.1.08 Stable"
+        versionCode 7
+        versionName "2.2.10"
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
     }
 
 signingConfigs {

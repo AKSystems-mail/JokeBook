@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '/providers/settings_provider.dart';
 import 'auth_screen.dart';
 import 'bits_screen.dart';
@@ -11,7 +12,8 @@ import 'calendar_screen.dart';
 import 'recordings_screen.dart';
 import 'set_lists_screen.dart';
 
-const String AKComedy = 'AKComedy'; // Define your CashApp username as a constant
+const String AKComedy =
+    'AKComedy'; // Define your CashApp username as a constant
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +25,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
+  final GlobalKey _one = GlobalKey();
+  final GlobalKey _two = GlobalKey();
+  final GlobalKey _three = GlobalKey();
+  final GlobalKey _four = GlobalKey();
+  final GlobalKey _five = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      if (!settings.hasSeenHomeShowcase) {
+        ShowCaseWidget.of(context)
+            .startShowCase([_one, _two, _three, _four, _five]);
+        settings.completeHomeShowcase();
+      }
+    });
+  }
+
   static const List<Widget> _widgetOptions = <Widget>[
     BitsScreen(),
     SetListsScreen(),
@@ -31,8 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _showSettingsPopup() {
-    Color tempColor = Provider.of<SettingsProvider>(context, listen: false).tempColor;
-    double sliderValue = Provider.of<SettingsProvider>(context, listen: false).colorToSliderValue(tempColor);
+    Color tempColor =
+        Provider.of<SettingsProvider>(context, listen: false).tempColor;
+    double sliderValue = Provider.of<SettingsProvider>(context, listen: false)
+        .colorToSliderValue(tempColor);
 
     showDialog(
       context: context,
@@ -53,9 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (value) {
                       setState(() {
                         sliderValue = value;
-                        tempColor = Provider.of<SettingsProvider>(context, listen: false).sliderValueToColor(value);
+                        tempColor = Provider.of<SettingsProvider>(context,
+                                listen: false)
+                            .sliderValueToColor(value);
                       });
-                      Provider.of<SettingsProvider>(context, listen: false).setTempColor(tempColor);
+                      Provider.of<SettingsProvider>(context, listen: false)
+                          .setTempColor(tempColor);
                     },
                   ),
                   const SizedBox(height: 20),
@@ -64,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       await FirebaseAuth.instance.signOut();
                       if (!mounted) return;
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const AuthScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const AuthScreen()),
                       );
                     },
                     child: const Text('Sign Out'),
@@ -78,7 +105,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     GestureDetector(
                       onTap: () {
                         // Use the constant in your URL string
-                        final Uri cashAppUri = Uri.parse('https://cash.app/$AKComedy');
+                        final Uri cashAppUri =
+                            Uri.parse('https://cash.app/$AKComedy');
                         launchUrl(cashAppUri);
                       },
                       child: const Text(
@@ -112,7 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         return Scaffold(
-          appBar: AppBar( // AppBar color is now handled by AppBarTheme in main.dart
+          appBar: AppBar(
+            // AppBar color is now handled by AppBarTheme in main.dart
             title: const Text('Joke Book'),
             backgroundColor: settingsProvider.backgroundColor,
           ),
@@ -128,25 +157,60 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _widgetOptions[_selectedIndex],
           ),
           bottomNavigationBar: BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
+            items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
-                icon: Icon(Icons.lightbulb_outline),
+                icon: Showcase(
+                  key: _one,
+                  title: 'Bits',
+                  description: 'Write down your joke ideas here',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.lightbulb_outline),
+                ),
                 label: 'Bits',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.list),
+                icon: Showcase(
+                  key: _two,
+                  title: 'Set Lists',
+                  description: 'Organize your bits into sets',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.list),
+                ),
                 label: 'Set Lists',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_today),
+                icon: Showcase(
+                  key: _three,
+                  title: 'Calendar',
+                  description: 'Schedule your shows',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.calendar_today),
+                ),
                 label: 'Calendar',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.mic),
+                icon: Showcase(
+                  key: _four,
+                  title: 'Recordings',
+                  description: 'Record your sets',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.mic),
+                ),
                 label: 'Recordings',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.settings),
+                icon: Showcase(
+                  key: _five,
+                  title: 'Settings',
+                  description: 'Adjust app settings',
+                  tooltipBackgroundColor: Colors.blue,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.settings),
+                ),
                 label: 'Settings',
               ),
             ],

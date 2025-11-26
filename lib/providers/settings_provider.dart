@@ -14,13 +14,42 @@ class SettingsProvider with ChangeNotifier {
 
   SettingsProvider() {
     _loadBackgroundColor();
+    _loadShowcaseStatus();
   }
+
+  bool _hasSeenHomeShowcase = false;
+  bool get hasSeenHomeShowcase => _hasSeenHomeShowcase;
+
+  bool _hasSeenRecordingsShowcase = false;
+  bool get hasSeenRecordingsShowcase => _hasSeenRecordingsShowcase;
 
   Future<void> _loadBackgroundColor() async {
     final prefs = await SharedPreferences.getInstance();
     final colorValue = prefs.getInt('backgroundColor') ?? 0xFFFFFFFF;
     _backgroundColor = Color(colorValue);
     _tempColor = _backgroundColor; // Set tempColor to backgroundColor initially
+    notifyListeners();
+  }
+
+  Future<void> _loadShowcaseStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasSeenHomeShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+    _hasSeenRecordingsShowcase =
+        prefs.getBool('hasSeenRecordingsShowcase') ?? false;
+    notifyListeners();
+  }
+
+  Future<void> completeHomeShowcase() async {
+    _hasSeenHomeShowcase = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenHomeShowcase', true);
+    notifyListeners();
+  }
+
+  Future<void> completeRecordingsShowcase() async {
+    _hasSeenRecordingsShowcase = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenRecordingsShowcase', true);
     notifyListeners();
   }
 

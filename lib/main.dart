@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import 'models/bit.dart';
 import 'models/set_list.dart';
@@ -65,11 +66,13 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
                   .copyWith(secondary: const Color(0xFFADD8E6)),
               primarySwatch: Colors.blue,
-              scaffoldBackgroundColor: settingsProvider.backgroundColor, // Tie scaffold background color to SettingsProvider
+              scaffoldBackgroundColor: settingsProvider
+                  .backgroundColor, // Tie scaffold background color to SettingsProvider
               appBarTheme: AppBarTheme(
                 backgroundColor: settingsProvider.backgroundColor,
                 elevation: 0.0, // Set elevation to 0 to remove initial shadow
-                scrolledUnderElevation: 0.0, // Tie AppBar background color to SettingsProvider
+                scrolledUnderElevation:
+                    0.0, // Tie AppBar background color to SettingsProvider
                 titleTextStyle: const TextStyle(
                   fontFamily: 'PermanentMarker',
                   fontSize: 24,
@@ -105,6 +108,11 @@ class MyApp extends StatelessWidget {
               '/home': (context) => const HomeScreen(),
               '/recordings': (context) =>
                   const RecordingsScreen(), // Add the RecordingsScreen route
+            },
+            builder: (context, child) {
+              return ShowCaseWidget(
+                builder: (context) => child!,
+              );
             },
           );
         },
