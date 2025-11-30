@@ -43,3 +43,5 @@ There are two main ways to build the app for release:
 **Important Notes:**
 *   Always ensure your project is committed to version control before starting a build.
 *   Increment the build number in `pubspec.yaml` (e.g., `1.0.0+2`, current is `1.0.0+1`) and `ios/Runner/Info.plist` (`CFBundleVersion`, current is `1`) for each new build you submit to App Store Connect for the same app version.
+
+
