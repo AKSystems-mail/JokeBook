@@ -62,4 +62,28 @@ class Recording {
       'duration': duration.inSeconds, // Add this field
     };
   }
+
+  factory Recording.fromJson(Map<String, dynamic> json) {
+    return Recording(
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      filePath: json['filePath'] ?? '',
+      setListId: json['setListId'] ?? '',
+      audioUrl: json['audioUrl'] ?? '',
+      createdAt: Timestamp.fromMillisecondsSinceEpoch(json['createdAt'] ?? 0),
+      duration: Duration(seconds: json['duration'] ?? 0),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'filePath': filePath,
+      'setListId': setListId,
+      'audioUrl': audioUrl,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'duration': duration.inSeconds,
+    };
+  }
 }

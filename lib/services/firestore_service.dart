@@ -258,6 +258,28 @@ class FirestoreService {
     });
   }
 
+  Future<void> updateRecording(Recording recording) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      _log.severe('User not authenticated!');
+      throw Exception('User not authenticated!');
+    }
+    final userId = user.uid;
+    _log.info('Updating recording with ID ${recording.id} for user $userId');
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('recordings')
+          .doc(recording.id)
+          .update(recording.toFirestore());
+      _log.info('updateRecording function completed successfully');
+    } catch (e) {
+      _log.severe('Error updating recording in Firestore:', e);
+      rethrow;
+    }
+  }
+
   Future<void> deleteRecording(Recording recording) async {
     final user = _auth.currentUser;
     if (user == null) {

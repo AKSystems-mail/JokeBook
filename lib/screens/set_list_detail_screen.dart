@@ -74,6 +74,28 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
     ) ?? false;
   }
 
+  Future<bool> _showOverwriteWarningDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Overwrite Recording?'),
+          content: const Text('Do you want to overwrite this recording?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Overwrite'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -106,14 +128,23 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
             padding: const EdgeInsets.all(12.0),
             child: RecordingButton(
               isRecording: recordingsProvider.isRecording(),
-              onPressed: () {HapticFeedback.heavyImpact();
+              onPressed: () async {
+                HapticFeedback.heavyImpact();
                 final recorder = context.read<RecordingsProvider>();
                 if (recorder.isRecording()) {
                   // Call stopRecording on the fresh instance
-                  recorder.stopRecording(context);
+                  await recorder.stopRecording(context);
                 } else {
+                  // Check if there is an existing recording for this set list
+                  final hasExisting = recorder.recordings.any(
+                    (r) => r.setListId == widget.setList.id
+                  );
+                  if (hasExisting) {
+                    final proceed = await _showOverwriteWarningDialog(context);
+                    if (!proceed || !context.mounted) return;
+                  }
                   // Call startRecording on the fresh instance
-                  recorder.startRecording(widget.setList.title, widget.setList.id);
+                  await recorder.startRecording(widget.setList.title, widget.setList.id);
                 }
               },
             ),
@@ -263,68 +294,110 @@ class _SetListDetailScreenState extends State<SetListDetailScreen> {
   }
 
   void _showReplaceBitDialog(BuildContext outerContext, BitProvider bitProvider, int originalBitIndexInSetlist, String swipedBitId) {
-    // This list holds the state of selected bits for the dialog.
+    // This list holds the state of selected bits for the sheet.
     // Initialize it with the bit that was swiped.
-    List<String> selectedBitsForDialog = [swipedBitId];
+    List<String> selectedBitsForSheet = [swipedBitId];
 
-    showDialog(
-      context: outerContext, // Use outerContext to avoid confusion
-      builder: (dialogContext) {
-        return StatefulBuilder( // StatefulBuilder to manage the dialog's internal UI updates
-          builder: (stfContext, stfSetState) { // stfSetState is for THIS StatefulBuilder
-            return AlertDialog(
-              // DialogTheme from main.dart will style the AlertDialog
-              title: const Text('Select Bits'),
-              content: SizedBox( // Constrain the size of the dialog content
-                width: double.maxFinite,
-                child: ListView.builder( // Use ListView.builder for scrollable content
-                  shrinkWrap: true,
-                  itemCount: bitProvider.bits.length,
-                  itemBuilder: (context, itemIndex) {
-                    final Bit currentBitInList = bitProvider.bits[itemIndex];
-                    return CheckboxListTile(
-                      title: Text(currentBitInList.title), // Text color from DialogTheme or ListTileTheme
-                      value: selectedBitsForDialog.contains(currentBitInList.id),
-                      activeColor: Theme.of(outerContext).colorScheme.primary, // Explicitly theme checkbox
-                      checkColor: Theme.of(outerContext).colorScheme.onPrimary,
-                      onChanged: (bool? newValue) {
-                        stfSetState(() { // Use stfSetState to update dialog content
-                          if (newValue == true) {
-                            if (!selectedBitsForDialog.contains(currentBitInList.id)) {
-                              selectedBitsForDialog.add(currentBitInList.id);
-                            }
-                          } else {
-                            selectedBitsForDialog.remove(currentBitInList.id);
-                          }
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                  child: const Text('Cancel'), // TextButtonTheme will style this
-                ),
-                TextButton(
-                  onPressed: () {
-                    // This setState is for the main _SetListDetailScreenState
-                    setState(() {
-                      // Replace the bit at the original index with all selected bits
-                      widget.setList.bits.removeAt(originalBitIndexInSetlist);
-                      widget.setList.bits.insertAll(originalBitIndexInSetlist, selectedBitsForDialog);
-                      widget.setList.updatedAt = DateTime.now();
-                      Provider.of<SetListProvider>(outerContext, listen: false)
-                          .updateSetList(widget.setList);
-                    });
-                    Navigator.of(dialogContext).pop(); // Close the dialog
-                  },
-                  child: const Text('OK'), // TextButtonTheme will style this
-                ),
-              ],
+    showModalBottomSheet(
+      context: outerContext,
+      isScrollControlled: true, // Allow full height
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (stfContext, stfSetState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar for better UX
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Edit Set List',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              // Logic to update the setlist
+                              // Replace the bit at the original index with all selected bits
+                              // This effectively handles "Replace" (if original unchecked, others checked)
+                              // "Insert" (if original checked + others checked)
+                              // "Remove" (if nothing checked - effectively a delete, though usually delete is separate)
+                              
+                              setState(() { // Updates the parent _SetListDetailScreenState
+                                widget.setList.bits.removeAt(originalBitIndexInSetlist);
+                                if (selectedBitsForSheet.isNotEmpty) {
+                                   widget.setList.bits.insertAll(originalBitIndexInSetlist, selectedBitsForSheet);
+                                }
+                                widget.setList.updatedAt = DateTime.now();
+                                Provider.of<SetListProvider>(outerContext, listen: false)
+                                    .updateSetList(widget.setList);
+                              });
+                              Navigator.of(sheetContext).pop();
+                            },
+                            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: bitProvider.bits.length,
+                        itemBuilder: (context, itemIndex) {
+                          final Bit currentBitInList = bitProvider.bits[itemIndex];
+                          final isSelected = selectedBitsForSheet.contains(currentBitInList.id);
+                          return CheckboxListTile(
+                            title: Text(
+                              currentBitInList.title,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            subtitle: Text(
+                                currentBitInList.body.replaceAll('\n', ' '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                            ),
+                            value: isSelected,
+                            activeColor: Theme.of(outerContext).colorScheme.primary,
+                            onChanged: (bool? newValue) {
+                              stfSetState(() {
+                                if (newValue == true) {
+                                  if (!selectedBitsForSheet.contains(currentBitInList.id)) {
+                                    selectedBitsForSheet.add(currentBitInList.id);
+                                  }
+                                } else {
+                                  selectedBitsForSheet.remove(currentBitInList.id);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
@@ -387,6 +460,7 @@ class _RecordingButtonState extends State<RecordingButton> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: widget.onPressed,
       child: AnimatedBuilder(
         animation: _animationController,

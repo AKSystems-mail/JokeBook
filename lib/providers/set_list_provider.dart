@@ -1,6 +1,8 @@
 // lib/providers/set_list_provider.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for User type
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch and Timestamp
 import '/models/set_list.dart';
 import '/services/firestore_service.dart';
@@ -14,19 +16,35 @@ class SetListProvider with ChangeNotifier {
   String? _error;
   static final Logger _log = Logger('SetListProvider');
 
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<List<SetList>>? _setListsSubscription;
+
   List<SetList> get setLists => _setLists;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   SetListProvider() {
     _log.info("SetListProvider initializing...");
-    _fetchSetLists();
+    _authSubscription = _firestoreService.auth.authStateChanges().listen((user) {
+      if (user != null) {
+        _subscribeToSetLists();
+      } else {
+        _unsubscribeFromSetLists();
+        _setLists = [];
+        _isLoading = false;
+        _error = null;
+        notifyListeners();
+      }
+    });
   }
 
-  void _fetchSetLists() {
+  void _subscribeToSetLists() {
+    _setListsSubscription?.cancel();
     _isLoading = true;
     _error = null;
-    _firestoreService.getSetListsStream().listen((fetchedSetLists) {
+    notifyListeners();
+
+    _setListsSubscription = _firestoreService.getSetListsStream().listen((fetchedSetLists) {
       _setLists = fetchedSetLists; // This list is now ordered by 'order' from Firestore
       _isLoading = false;
       _error = null;
@@ -39,6 +57,18 @@ class SetListProvider with ChangeNotifier {
       _setLists = [];
       notifyListeners();
     });
+  }
+
+  void _unsubscribeFromSetLists() {
+    _setListsSubscription?.cancel();
+    _setListsSubscription = null;
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _setListsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> addSetList(String title, DateTime date, List<String> bitIds) async {
@@ -190,7 +220,7 @@ class SetListProvider with ChangeNotifier {
       _log.info("Successfully persisted reordered setlists to Firestore.");
     } catch (e) {
       _log.severe("Failed to persist setlist order to Firestore: $e");
-      _fetchSetLists();
+      _subscribeToSetLists();
       rethrow;
     }
   }

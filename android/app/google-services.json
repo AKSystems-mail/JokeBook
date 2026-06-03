@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "578920433940-1ahmbrdsadfmbmuhh7h26g6je2985vjv.apps.googleusercontent.com",
+          "client_id": "578920433940-o43n739m4vglmgm5kvpm6l41sle5bon5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.jokebook.app",
-            "certificate_hash": "90e6ff24da38fb7fda9822ec81c4ba6005c5eb05"
+            "certificate_hash": "a93dff5cb9cc938df81718a0de4afc583704c92e"
           }
         },
         {
@@ -37,6 +37,13 @@
             {
               "client_id": "578920433940-a6anuf2i62hnje30d0qhrmpm5b6akvvl.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "578920433940-118ki5kdfh6lbav0fc65p5dpekcte8ju.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jokebook.jokebook"
+              }
             }
           ]
         }

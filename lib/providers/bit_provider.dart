@@ -1,6 +1,8 @@
 // lib/providers/bit_provider.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for User type
 import '/models/bit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch
 import '/services/firestore_service.dart';
@@ -11,24 +13,50 @@ class BitProvider with ChangeNotifier {
   List<Bit> _bits = [];
   bool _isLoading = true; // Added loading state
 
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<List<Bit>>? _bitsSubscription;
+
   List<Bit> get bits => _bits;
   bool get isLoading => _isLoading; // Added isLoading getter
 
   BitProvider() {
-    _firestoreService.getBitsStream().listen((bitsFromStream) {
-      _bits = bitsFromStream; // This list is now ordered by 'order' from Firestore
-      if (_isLoading) { // Set isLoading to false after the first data load
+    _authSubscription = _firestoreService.auth.authStateChanges().listen((user) {
+      if (user != null) {
+        _subscribeToBits();
+      } else {
+        _unsubscribeFromBits();
+        _bits = [];
         _isLoading = false;
+        notifyListeners();
       }
+    });
+  }
+
+  void _subscribeToBits() {
+    _bitsSubscription?.cancel();
+    _isLoading = true;
+    notifyListeners();
+
+    _bitsSubscription = _firestoreService.getBitsStream().listen((bitsFromStream) {
+      _bits = bitsFromStream; // This list is now ordered by 'order' from Firestore
+      _isLoading = false;
       notifyListeners();
     }, onError: (error) {
-      // Handle error appropriately, e.g., set an error state
-      // You might also want to set _isLoading to false on error
-       if (_isLoading) {
-         _isLoading = false;
-         notifyListeners(); // Notify even on error if loading state changes
-       }
+       _isLoading = false;
+       notifyListeners(); // Notify even on error if loading state changes
     });
+  }
+
+  void _unsubscribeFromBits() {
+    _bitsSubscription?.cancel();
+    _bitsSubscription = null;
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _bitsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> addBit(Bit bit) async {
