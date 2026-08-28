@@ -109,6 +109,7 @@ class RecordingsProvider with ChangeNotifier {
   // --- REVISED stopRecording with DETAILED LOGGING ---
   Future<void> stopRecording(BuildContext context) async {
     _log.info("--- A. stopRecording called. ---");
+    final messenger = ScaffoldMessenger.of(context); // capture before async gaps
 
     if (_isRecording && startTime != null) {
       _log.info("--- B. _isRecording is true. Proceeding. ---");
@@ -116,6 +117,7 @@ class RecordingsProvider with ChangeNotifier {
 
       if (elapsed.inMilliseconds < 1000) {
         _log.warning("--- C. EXIT: Recording too short (< 1s). Aborting. ---");
+        _showError(messenger, 'Recording too short (under 1 second). Nothing was saved.');
         return;
       }
 
@@ -136,6 +138,7 @@ class RecordingsProvider with ChangeNotifier {
 
           if (fileLength < 1024) { // Check for a reasonably small size, not just 0
             _log.severe("--- H. EXIT: Recording file is empty or too small. Aborting upload. ---");
+            _showError(messenger, 'Recording failed: file was empty or too small. Nothing was saved.');
             activeRecording = null;
             notifyListeners();
             return;
@@ -167,11 +170,13 @@ class RecordingsProvider with ChangeNotifier {
 
         } else {
           _log.severe("--- L. EXIT: Stop condition failed: activeRecording is null or path from stop() was null. ---");
+          _showError(messenger, 'Recording failed: could not stop the recorder. Nothing was saved.');
           activeRecording = null;
           notifyListeners();
         }
       } catch (e) {
         _log.severe("--- X. EXIT: CATCH BLOCK ERROR in stopRecording: $e ---");
+        _showError(messenger, 'Recording could not be saved: $e');
         _isRecording = false;
         activeRecording = null;
         _stopTimer();
@@ -281,6 +286,12 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   bool isRecording() => _isRecording;
+
+  void _showError(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+    );
+  }
 
   void _startTimer() {
     _timer?.cancel();
