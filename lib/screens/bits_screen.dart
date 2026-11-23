@@ -86,11 +86,17 @@ class BitsScreen extends StatelessWidget {
                           },
                         );
                       },
-                      onDismissed: (direction) {
-                        bitProvider.deleteBit(bit.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bit deleted')),
-                        );
+                      onDismissed: (direction) async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await bitProvider.deleteBit(bit.id);
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Bit deleted')),
+                          );
+                        } catch (e) {
+                          messenger.showSnackBar(SnackBar(
+                              content: Text('Could not delete bit: $e')));
+                        }
                       },
                       child: Card(
                         key: ValueKey(bit.id),

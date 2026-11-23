@@ -1,5 +1,7 @@
 // lib/providers/set_list_provider.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch and Timestamp
 import '/models/set_list.dart';
@@ -12,6 +14,7 @@ class SetListProvider with ChangeNotifier {
   List<SetList> _setLists = [];
   bool _isLoading = true;
   String? _error;
+  StreamSubscription<List<SetList>>? _sub;
   static final Logger _log = Logger('SetListProvider');
 
   List<SetList> get setLists => _setLists;
@@ -26,7 +29,8 @@ class SetListProvider with ChangeNotifier {
   void _fetchSetLists() {
     _isLoading = true;
     _error = null;
-    _firestoreService.getSetListsStream().listen((fetchedSetLists) {
+    _sub?.cancel();
+    _sub = _firestoreService.getSetListsStream().listen((fetchedSetLists) {
       _setLists = fetchedSetLists; // This list is now ordered by 'order' from Firestore
       _isLoading = false;
       _error = null;
@@ -253,5 +257,11 @@ class SetListProvider with ChangeNotifier {
         await updateSetList(updatedSetlist); // updateSetList handles its own updatedAt
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }

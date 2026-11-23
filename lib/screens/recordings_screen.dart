@@ -316,14 +316,19 @@ class RecordingsScreenState extends State<RecordingsScreen>
                               _selectedRecording = null;
                             });
                           }
-                          //Use reader for provider action
-                          await recordingsProviderReader
-                              .deleteRecording(recording);
-                          if (!mounted) return;
-                          scaffoldMessenger.showSnackBar(
-                            SnackBar(
-                                content: Text('${recording.title} deleted')),
-                          );
+                          try {
+                            await recordingsProviderReader
+                                .deleteRecording(recording);
+                            if (!mounted) return;
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('${recording.title} deleted')),
+                            );
+                          } catch (e) {
+                            scaffoldMessenger.showSnackBar(SnackBar(
+                                content: Text('Could not delete: $e')));
+                          }
                         },
                         background: Container(
                           // This is the background revealed during swipe

@@ -273,8 +273,9 @@ class FirestoreService {
           .collection('recordings')
           .doc(recording.id)
           .delete();
-    } catch (e) {
+    } on FirebaseException catch (e) {
       _log.severe('Error deleting recording in Firestore:', e);
+      rethrow;
     }
   }
 }

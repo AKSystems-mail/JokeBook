@@ -79,11 +79,17 @@ class SetListsScreen extends StatelessWidget {
                           },
                         );
                       },
-                      onDismissed: (direction) {
-                        setListProvider.deleteSetList(setList.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${setList.title} deleted')),
-                        );
+                      onDismissed: (direction) async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await setListProvider.deleteSetList(setList.id);
+                          messenger.showSnackBar(SnackBar(
+                              content: Text('${setList.title} deleted')));
+                        } catch (e) {
+                          messenger.showSnackBar(SnackBar(
+                              content:
+                                  Text('Could not delete set list: $e')));
+                        }
                       },
                       background: Container(
                         color: Colors.red,

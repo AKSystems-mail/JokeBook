@@ -273,15 +273,20 @@ class RecordingsProvider with ChangeNotifier {
   }
 
   Future<void> deleteRecording(Recording recording) async {
-    try {
-      if (recording.audioUrl.isNotEmpty) {
+    // Firestore row first: if the file delete fails afterwards the row is still
+    // gone (no orphan row pointing at a missing file), and a failed row delete
+    // leaves everything intact for a retry.
+    await FirestoreService().deleteRecording(recording);
+    recordings.removeWhere((r) => r.id == recording.id);
+    notifyListeners();
+    if (recording.audioUrl.isNotEmpty) {
+      try {
         await FirebaseStorage.instance.refFromURL(recording.audioUrl).delete();
+      } on FirebaseException catch (e) {
+        if (e.code != 'object-not-found') {
+          _log.warning("Audio file not deleted for ${recording.id}: $e");
+        }
       }
-      await FirestoreService().deleteRecording(recording);
-      recordings.removeWhere((r) => r.id == recording.id);
-      notifyListeners();
-    } catch (e) {
-      _log.warning("Error deleting recording: $e");
     }
   }
 

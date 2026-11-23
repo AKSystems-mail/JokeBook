@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "firebase": "^11.2.0"
+    "firebase": "^13.4.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
   }
 }

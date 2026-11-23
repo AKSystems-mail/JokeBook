@@ -29,11 +29,6 @@ void main() async {
   Hive.registerAdapter(BitAdapter()); // Register the BitAdapter
   Hive.registerAdapter(SetListAdapter());
   runApp(const MyApp());
-
-  // Listen for authentication state changes
-  FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    if (user != null) {}
-  }).onError((error, stackTrace) {});
 }
 
 class MyApp extends StatelessWidget {
@@ -49,8 +44,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
+    // Rebuild the provider tree per user: signing out/in disposes the old
+    // providers (and their Firestore listeners) instead of leaking another account's data.
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      initialData: FirebaseAuth.instance.currentUser,
+      builder: (context, snapshot) => MultiProvider(
+        key: ValueKey(snapshot.data?.uid),
+        providers: [
         ChangeNotifierProvider(create: (_) => BitProvider()),
         ChangeNotifierProvider(create: (_) => SetListProvider()),
         ChangeNotifierProvider(
@@ -116,6 +117,7 @@ class MyApp extends StatelessWidget {
             },
           );
         },
+        ),
       ),
     );
   }

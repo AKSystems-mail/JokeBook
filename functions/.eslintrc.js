@@ -27,6 +27,10 @@ module.exports = {
   ],
   rules: {
     "quotes": ["error", "double"],
+    // google's 80-col / no-space-in-braces defaults fight modern TS; 100 + spaced
+    // braces match every other project here.
+    "max-len": ["error", { "code": 100, "ignoreUrls": true }],
+    "object-curly-spacing": ["error", "always"],
     "import/no-unresolved": 0,
     "indent": ["error", 2],
   },

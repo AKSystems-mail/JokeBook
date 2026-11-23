@@ -1,5 +1,7 @@
 // lib/providers/bit_provider.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '/models/bit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For WriteBatch
@@ -10,12 +12,13 @@ class BitProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   List<Bit> _bits = [];
   bool _isLoading = true; // Added loading state
+  StreamSubscription<List<Bit>>? _sub;
 
   List<Bit> get bits => _bits;
   bool get isLoading => _isLoading; // Added isLoading getter
 
   BitProvider() {
-    _firestoreService.getBitsStream().listen((bitsFromStream) {
+    _sub = _firestoreService.getBitsStream().listen((bitsFromStream) {
       _bits = bitsFromStream; // This list is now ordered by 'order' from Firestore
       if (_isLoading) { // Set isLoading to false after the first data load
         _isLoading = false;
@@ -190,5 +193,11 @@ class BitProvider with ChangeNotifier {
       // Consider setting an error state here as well
       throw e; // Propagate error
     }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }

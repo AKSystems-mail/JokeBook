@@ -78,7 +78,7 @@ class _EditBitScreenState extends State<EditBitScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        _handlePop(false);
+        await _handlePop(false);
         return true;
       },
       child: Consumer<SettingsProvider>(

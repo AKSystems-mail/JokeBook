@@ -53,7 +53,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
     } catch (e) {
       // Handle error
       _log.severe('Error adding bit: $e'); // Logging statement
-      if (_title.isEmpty && _body.isEmpty) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to create bit. Error: $e')),
         );
@@ -72,7 +72,7 @@ class _CreateBitScreenState extends State<CreateBitScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        _handlePop(false);
+        await _handlePop(false);
         return true;
       },
       child: Consumer<SettingsProvider>(

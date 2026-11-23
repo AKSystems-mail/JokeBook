@@ -47,7 +47,9 @@ class Recording {
       filePath: data['filePath'] ?? '',
       setListId: data['setListId'] ?? '',
       audioUrl: data['audioUrl'] ?? '',
-      createdAt: data['createdAt'],
+      createdAt: data['createdAt'] is Timestamp
+          ? data['createdAt'] as Timestamp
+          : Timestamp.now(),
       duration: Duration(seconds: data['duration'] ?? 0), // Add this field
     );
   }
